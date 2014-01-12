@@ -1,307 +1,178 @@
 #ifndef A_STAR
 #define A_STAR
-#include <stdio.h>
-#include <stdlib.h>
-#include <vector>
-#include <iostream>
-#include <iomanip>
-#include <queue>
 
-const int n = 128;
-const int m = 128;
+#include "stlastar.h";
 
-static int mapper[n][m];
-static int closed_nodes_map[n][m]; // map of closed (tried-out) nodes
-static int open_nodes_map[n][m]; // map of open (not-yet-tried) nodes
-static int dir_map[n][m]; // map of directions
-const int dir=4; // number of possible directions to go at any position
-// if dir==4
-static int dx[dir]={1, 0, -1, 0};
-static int dy[dir]={0, 1, 0, -1};
-// if dir==8
-//static int dx[dir]={1, 1, 0, -1, -1, -1, 0, 1};
-//static int dy[dir]={0, 1, 1, 1, 0, -1, -1, -1};
+// Global data
 
-class node
+// The world map
+
+int MAP_WIDTH = 20;
+int MAP_HEIGHT = 20;
+
+vector<vector<int>> map1;
+
+// map helper functions
+
+int GetMap( int x, int y )
 {
-    // current position
-    int xPos;
-    int yPos;
-    // total distance already travelled to reach the node
-    int level;
-    // priority=level+remaining distance estimate
-    int priority;  // smaller: higher priority
 
-    public:
-        node(int xp, int yp, int d, int p) 
-            {xPos=xp; yPos=yp; level=d; priority=p;}
-    
-        int getxPos() const {return xPos;}
-        int getyPos() const {return yPos;}
-        int getLevel() const {return level;}
-        int getPriority() const {return priority;}
+	if( x < 0 ||
+	    x >= MAP_WIDTH ||
+		 y < 0 ||
+		 y >= MAP_HEIGHT
+	  )
+	{
+		return 9;	 
+	}
 
-        void updatePriority(const int & xDest, const int & yDest)
-        {
-             priority=level+estimate(xDest, yDest)*10; //A*
-        }
-
-        // give better priority to going strait instead of diagonally
-        void nextLevel(const int & i) // i: direction
-        {
-             level+=(dir==8?(i%2==0?10:14):10);
-        }
-        
-        // Estimation function for the remaining distance to the goal.
-        const int & estimate(const int & xDest, const int & yDest) const
-        {
-            static int xd, yd, d;
-            xd=xDest-xPos;
-            yd=yDest-yPos;         
-
-            // Euclidian Distance
-            d=static_cast<int>(std::sqrt(double(xd*xd+yd*yd)));
-
-            // Manhattan distance
-            //d=abs(xd)+abs(yd);
-            
-            // Chebyshev distance
-            //d=max(abs(xd), abs(yd));
-
-            return(d);
-        }
-};
-
-// Determine priority (in the priority queue)
-bool operator<(const node & a, const node & b)
-{
-  return a.getPriority() > b.getPriority();
+	return map1[y][x];
 }
 
-// A-star algorithm.
-// The route returned is a string of direction digits.
-string pathFind( const int & xStart, const int & yStart, 
-                 const int & xFinish, const int & yFinish )
+
+
+// Definitions
+
+class MapSearchNode
 {
-    static priority_queue<node> pq[2]; // list of open (not-yet-tried) nodes
-    static int pqi; // pq index
-    static node* n0;
-    static node* m0;
-    static int i, j, x, y, xdx, ydy;
-    static char c;
-    pqi=0;
+public:
+	unsigned int x;	 // the (x,y) positions of the node
+	unsigned int y;	
+	
+	MapSearchNode() { x = y = 0; }
+	MapSearchNode( unsigned int px, unsigned int py ) { x=px; y=py; }
 
-    // reset the node maps
-    for(y=0;y<m;y++)
-    {
-        for(x=0;x<n;x++)
-        {
-            closed_nodes_map[x][y]=0;
-            open_nodes_map[x][y]=0;
-        }
-    }
+	float GoalDistanceEstimate( MapSearchNode &nodeGoal );
+	bool IsGoal( MapSearchNode &nodeGoal );
+	bool GetSuccessors( AStarSearch<MapSearchNode> *astarsearch, MapSearchNode *parent_node );
+	float GetCost( MapSearchNode &successor );
+	bool IsSameState( MapSearchNode &rhs );
 
-    // create the start node and push into list of open nodes
-    n0=new node(xStart, yStart, 0, 0);
-    n0->updatePriority(xFinish, yFinish);
-    pq[pqi].push(*n0);
-    open_nodes_map[x][y]=n0->getPriority(); // mark it on the open nodes map
-
-    // A* search
-    while(!pq[pqi].empty())
-    {
-        // get the current node w/ the highest priority
-        // from the list of open nodes
-        n0=new node( pq[pqi].top().getxPos(), pq[pqi].top().getyPos(), 
-                     pq[pqi].top().getLevel(), pq[pqi].top().getPriority());
-
-        x=n0->getxPos(); y=n0->getyPos();
-
-        pq[pqi].pop(); // remove the node from the open list
-        open_nodes_map[x][y]=0;
-        // mark it on the closed nodes map
-        closed_nodes_map[x][y]=1;
-
-        // quit searching when the goal state is reached
-        //if((*n0).estimate(xFinish, yFinish) == 0)
-        if(x==xFinish && y==yFinish) 
-        {
-            // generate the path from finish to start
-            // by following the directions
-            string path="";
-            while(!(x==xStart && y==yStart))
-            {
-                j=dir_map[x][y];
-                c='0'+(j+dir/2)%dir;
-                path=c+path;
-                x+=dx[j];
-                y+=dy[j];
-            }
-
-            // garbage collection
-            delete n0;
-            // empty the leftover nodes
-            while(!pq[pqi].empty()) pq[pqi].pop();           
-            return path;
-        }
-
-        // generate moves (child nodes) in all possible directions
-        for(i=0;i<dir;i++)
-        {
-            xdx=x+dx[i]; ydy=y+dy[i];
-
-            if(!(xdx<0 || xdx>n-1 || ydy<0 || ydy>m-1 || mapper[xdx][ydy]==1 
-                || closed_nodes_map[xdx][ydy]==1))
-            {
-                // generate a child node
-                m0=new node( xdx, ydy, n0->getLevel(), 
-                             n0->getPriority());
-                m0->nextLevel(i);
-                m0->updatePriority(xFinish, yFinish);
-
-                // if it is not in the open list then add into that
-                if(open_nodes_map[xdx][ydy]==0)
-                {
-                    open_nodes_map[xdx][ydy]=m0->getPriority();
-                    pq[pqi].push(*m0);
-                    // mark its parent node direction
-                    dir_map[xdx][ydy]=(i+dir/2)%dir;
-                }
-                else if(open_nodes_map[xdx][ydy]>m0->getPriority())
-                {
-                    // update the priority info
-                    open_nodes_map[xdx][ydy]=m0->getPriority();
-                    // update the parent direction info
-                    dir_map[xdx][ydy]=(i+dir/2)%dir;
-
-                    // replace the node
-                    // by emptying one pq to the other one
-                    // except the node to be replaced will be ignored
-                    // and the new node will be pushed in instead
-                    while(!(pq[pqi].top().getxPos()==xdx && 
-                           pq[pqi].top().getyPos()==ydy))
-                    {                
-                        pq[1-pqi].push(pq[pqi].top());
-                        pq[pqi].pop();       
-                    }
-                    pq[pqi].pop(); // remove the wanted node
-                    
-                    // empty the larger size pq to the smaller one
-                    if(pq[pqi].size()>pq[1-pqi].size()) pqi=1-pqi;
-                    while(!pq[pqi].empty())
-                    {                
-                        pq[1-pqi].push(pq[pqi].top());
-                        pq[pqi].pop();       
-                    }
-                    pqi=1-pqi;
-                    pq[pqi].push(*m0); // add the better node instead
-                }
-                else delete m0; // garbage collection
-            }
-        }
-        delete n0; // garbage collection
-    }
-    return ""; // no route found
-}
-struct vehicle
-{
-    vector<vec2> path;
-    string route;
-    float progress;
-    bool reached;
-    vehicle()
-    {
-        reached = false;
-    };
-    vec2 getPosition()
-    {
-        double adder = 0.25;
-        if (reached)
-        {
-            vec2 spot = path.back();
-            switch (route.back())
-            {
-                case '0':
-                    spot[1] += adder;
-                    break;
-                case '1':
-                    spot[0] -= adder;
-                    break;
-                case '2':
-                    spot[1] -= adder;
-                    break;
-                case '3':
-                    spot[0] += adder;
-                    break;
-            }
-            return spot;
-        }
-        
-        if (progress >= path.size()-1)
-        {
-            reached = true;
-            vec2 spot = path.back();
-            switch (route.back())
-            {
-                case '0':
-                    spot[1] += adder;
-                    break;
-                case '1':
-                    spot[0] -= adder;
-                    break;
-                case '2':
-                    spot[1] -= adder;
-                    break;
-                case '3':
-                    spot[0] += adder;
-                    break;
-            }
-            return spot;
-        }
-        float start = floor(progress);
-        float ratio = progress-start;
-        float invrat = 1.0f-ratio;
-        float end = ceil(progress);
-        vec2 p1 = path[start];
-        vec2 p2 = path[end];
+	void PrintNodeInfo(); 
+	pair<int,int> GetNodeInfo(); 
 
 
-        if (route[start] == '0')
-        {
-            p1[1] += adder;
-        }
-        else if (route[start] == '1')
-        {
-            p1[0] -= adder;
-        }
-        else if (route[start] == '2')
-        {
-            p1[1] -= adder;
-        }
-        else if (route[start] == '3')
-        {
-            p1[0] += adder;
-        }
-
-        if (route[end] == '0')
-        {
-            p2[1] += adder;
-        }
-        else if (route[end] == '1')
-        {
-            p2[0] -= adder;
-        }
-        else if (route[end] == '2')
-        {
-            p2[1] -= adder;
-        }
-        else if (route[end] == '3')
-        {
-            p2[0] += adder;
-        }
-        p1 *= invrat;
-        p2 *= ratio;
-        return (p1+p2);
-    }
 };
+
+bool MapSearchNode::IsSameState( MapSearchNode &rhs )
+{
+
+	// same state in a maze search is simply when (x,y) are the same
+	if( (x == rhs.x) &&
+		(y == rhs.y) )
+	{
+		return true;
+	}
+	else
+	{
+		return false;
+	}
+
+}
+
+void MapSearchNode::PrintNodeInfo()
+{
+	char str[100];
+	sprintf( str, "Node position : (%d,%d)\n", x,y );
+
+	cout << str;
+}
+pair<int,int> MapSearchNode::GetNodeInfo()
+{
+
+    return pair<int,int>(x,y);
+}
+
+// Here's the heuristic function that estimates the distance from a Node
+// to the Goal. 
+
+float MapSearchNode::GoalDistanceEstimate( MapSearchNode &nodeGoal )
+{
+	float xd = float( ( (float)x - (float)nodeGoal.x ) );
+	float yd = float( ( (float)y - (float)nodeGoal.y) );
+
+	return xd + yd;
+
+}
+
+bool MapSearchNode::IsGoal( MapSearchNode &nodeGoal )
+{
+
+	if( (x == nodeGoal.x) &&
+		(y == nodeGoal.y) )
+	{
+		return true;
+	}
+
+	return false;
+}
+
+// This generates the successors to the given Node. It uses a helper function called
+// AddSuccessor to give the successors to the AStar class. The A* specific initialisation
+// is done for each node internally, so here you just set the state information that
+// is specific to the application
+bool MapSearchNode::GetSuccessors( AStarSearch<MapSearchNode> *astarsearch, MapSearchNode *parent_node )
+{
+
+	int parent_x = -1; 
+	int parent_y = -1; 
+
+	if( parent_node )
+	{
+		parent_x = parent_node->x;
+		parent_y = parent_node->y;
+	}
+	
+
+	MapSearchNode NewNode;
+
+	// push each possible move except allowing the search to go backwards
+
+	if( (GetMap( x-1, y ) < 9) 
+		&& !((parent_x == x-1) && (parent_y == y))
+	  ) 
+	{
+		NewNode = MapSearchNode( x-1, y );
+		astarsearch->AddSuccessor( NewNode );
+	}	
+
+	if( (GetMap( x, y-1 ) < 9) 
+		&& !((parent_x == x) && (parent_y == y-1))
+	  ) 
+	{
+		NewNode = MapSearchNode( x, y-1 );
+		astarsearch->AddSuccessor( NewNode );
+	}	
+
+	if( (GetMap( x+1, y ) < 9)
+		&& !((parent_x == x+1) && (parent_y == y))
+	  ) 
+	{
+		NewNode = MapSearchNode( x+1, y );
+		astarsearch->AddSuccessor( NewNode );
+	}	
+
+		
+	if( (GetMap( x, y+1 ) < 9) 
+		&& !((parent_x == x) && (parent_y == y+1))
+		)
+	{
+		NewNode = MapSearchNode( x, y+1 );
+		astarsearch->AddSuccessor( NewNode );
+	}	
+
+	return true;
+}
+
+// given this node, what does it cost to move to successor. In the case
+// of our map the answer is the map terrain value at this node since that is 
+// conceptually where we're moving
+
+float MapSearchNode::GetCost( MapSearchNode &successor )
+{
+	return (float) GetMap( x, y );
+
+}
+
+
 #endif
