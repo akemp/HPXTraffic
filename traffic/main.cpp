@@ -20,7 +20,7 @@ int main( void )
     
     int width = 512, height = width;
 
-    createTerrain(width,height,vertex_data,indices,0.1, 3000);
+    createTerrain(width,height,vertex_data,indices,1.0, 300);
     
     vector<vector<int>> zones(width, vector<int>(height, 0));
 
@@ -64,7 +64,7 @@ int main( void )
 
     for (int i = 0; i < 1; ++i)
     {
-        car.move = vec3(i+0.5, -3.9, 0.75);
+        car.move = vec3(i+0.5, -4.0, 0.75);
         cars.push_back(car);
     }
 

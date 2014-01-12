@@ -17,6 +17,6 @@ void main()
         discard;
     vec4 col = vec4(0);
         float red = texture2D(roadMap, tex_coords_frag/512.0).r;
-        col = texture2D(tex, pos.xz/10.0)*red*2.0;
+        col = texture2D(tex, pos.xz)*red*2.0;
 	    color = col*(1.0-dist)+vec4(0.95)*dist;
 }

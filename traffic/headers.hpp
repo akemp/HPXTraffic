@@ -360,15 +360,15 @@ void createTerrain(int maxx, int maxy, vector<VertexData>& vertex_data, vector<u
 {
     int index = 0;
     
-	CImg <unsigned char> image("heightmap.ppm"); 
-    image.resize(maxx+1,maxy+1);
+	//CImg <unsigned char> image("heightmap.ppm"); 
+    //image.resize(maxx+1,maxy+1);
     for (int i = 0; i < maxx; ++i)
     {
         for (int j = 0; j < maxy; ++j)
         {
-            vec4 height = vec4(image(i,j),image(i+1,j),image(i,j+1),image(i+1,j+1));
-            height /= -heights;
-            createSquare(i*scale,j*scale,vertex_data,indices,index,height,scale);
+            //vec4 height = vec4(image(i,j),image(i+1,j),image(i,j+1),image(i+1,j+1));
+             // height /= -heights;
+            createSquare(i*scale,j*scale,vertex_data,indices,index);//,height,scale);
         }
     }
 }
