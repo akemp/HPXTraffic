@@ -376,21 +376,25 @@ void createTerrain(int maxx, int maxy, vector<VertexData>& vertex_data, vector<u
 vector<Road> createRoads(vector<vector<int>> zones)
 {
     vector<Road> roads;
-    for (int i = 1; i < zones.size()-1; i ++)
+    for (int i = 0; i < zones.size(); i ++)
     {
-        for (int j = 1; j < zones[i].size()-1; j++)
+        for (int j = 0; j < zones[i].size(); j++)
         {
-            if (zones[i][j] != 0)
+            if (zones[i][j] != 9)
             {
                 Road r(i,j);
-                if (zones[i-1][j] != 0)
-                    r.down = true;
-                if (zones[i+1][j] != 0)
-                    r.up = true;
-                if (zones[i][j-1] != 0)
-                    r.left = true;
-                if (zones[i][j+1] != 0)
-                    r.right = true;
+                if (i > 0)
+                    if (zones[i-1][j] != 9)
+                        r.down = true;
+                if (i < zones.size() - 1)
+                    if (zones[i+1][j] != 9)
+                        r.up = true;
+                if (j > 0)
+                    if (zones[i][j-1] != 9)
+                        r.left = true;
+                if (j < zones[0].size() - 1)
+                    if (zones[i][j+1] != 9)
+                        r.right = true;
                 roads.push_back(r);
             }
         }

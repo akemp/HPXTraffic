@@ -3,7 +3,26 @@
 
 int main( void )
 {
+    int width = 512, height = width;
+
+    MAP_WIDTH = width;
+    MAP_HEIGHT = height;
     
+    vector<vector<int>> zones(width, vector<int>(height, 9));
+    
+    vector<ivec2> accessLocs;
+    for (int i = 0; i < width; ++i)
+    {
+        for (int j = 0; j < height; ++j)
+        {
+            if (i % 20 == 0 || j % 8 == 0)
+            {
+                zones[i][j] = 1;
+                accessLocs.push_back(ivec2(i,j));
+            }
+        }
+    }
+
 	// Our problem defines the world as a 2d array representing a terrain
 	// Each element contains an integer from 0 to 5 which indicates the cost 
 	// of travel across the terrain. Zero means the least possible difficulty 
@@ -12,14 +31,15 @@ int main( void )
 
 	// Create an instance of the search class...
 
+
     for (int i = 0; i < MAP_WIDTH; ++i)
     {
         vector<int> tmap;
         for (int j = 0; j < MAP_HEIGHT; ++j)
         {
-            tmap.push_back((i+j)%5);
+            tmap.push_back(zones[i][j]);
         }
-        map1.push_back(tmap);
+        mapper.push_back(tmap);
     }
 
 	AStarSearch<MapSearchNode> astarsearch;
@@ -33,13 +53,13 @@ int main( void )
 
 		// Create a start state
 		MapSearchNode nodeStart;
-		nodeStart.x = rand()%MAP_WIDTH;
-		nodeStart.y = rand()%MAP_HEIGHT; 
+		nodeStart.x = accessLocs[0][0];
+		nodeStart.y = accessLocs[0][1]; 
 
 		// Define the goal state
 		MapSearchNode nodeEnd;
-		nodeEnd.x = rand()%MAP_WIDTH;						
-		nodeEnd.y = rand()%MAP_HEIGHT; 
+		nodeEnd.x = accessLocs[513][0];						
+		nodeEnd.y = accessLocs[513][1]; 
 		
 		// Set Start and goal states
 		
@@ -113,21 +133,9 @@ int main( void )
 	vector<unsigned int> indices;
     vector<VertexData> vertex_data;
     
-    int width = 512, height = width;
 
     createTerrain(width,height,vertex_data,indices,1.0, 300);
     
-    vector<vector<int>> zones(width, vector<int>(height, 0));
-
-    for (int i = 0; i < width; ++i)
-    {
-        for (int j = 0; j < height; ++j)
-        {
-            if (i % 20 == 0 || j % 8 == 0)
-                zones[i][j] = 1;
-        }
-    }
-
     //vector<Road> road = createRoads(zones);
 
     Mesh terrain(vertex_data,indices, LoadShaders( "vert.glsl", "fragTerra.glsl" ), loadDDS("dirt.dds"));//, createMap(roads,width,height));
@@ -167,6 +175,7 @@ int main( void )
 	int nbFrames = 0;
     double last = glfwGetTime();
     double totalTime = 0;
+    double timescale = 500.0;
 	do{
         //void fps(int& nbFrames, double& totalTime, double& lastTime, double &last)
         double elapsed = fps(nbFrames, totalTime, lastTime, last);
@@ -178,9 +187,9 @@ int main( void )
         roads.draw();
         for (int i = 0; i < cars.size(); ++i)
         {
-            int low = std::min<int>(floor(totalTime/1000.0), path.size()-1);
-            int high = std::min<int>(ceil(totalTime/1000.0), path.size()-1);
-            double diff = std::min<double>(totalTime/1000.0-floor(totalTime/1000.0), 1.0);
+            int low = std::min<int>(floor(totalTime/timescale), path.size()-1);
+            int high = std::min<int>(ceil(totalTime/timescale), path.size()-1);
+            double diff = std::min<double>(totalTime/timescale-floor(totalTime/timescale), 1.0);
             vec2 moving = vec2(path[low].first*(1.0-diff)+path[high].first*diff,path[low].second*(1.0-diff)+path[high].second*diff);
             cars[i].move = vec3(0.5+moving[0], -4.0, 0.5+moving[1]);
             cars[i].draw();

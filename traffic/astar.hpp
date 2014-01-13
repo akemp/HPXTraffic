@@ -7,10 +7,10 @@
 
 // The world map
 
-int MAP_WIDTH = 20;
-int MAP_HEIGHT = 20;
+int MAP_WIDTH = 0;
+int MAP_HEIGHT = 0;
 
-vector<vector<int>> map1;
+vector<vector<int>> mapper;
 
 // map helper functions
 
@@ -26,7 +26,7 @@ int GetMap( int x, int y )
 		return 9;	 
 	}
 
-	return map1[y][x];
+	return mapper[x][y];
 }
 
 
