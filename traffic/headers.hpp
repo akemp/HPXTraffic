@@ -28,11 +28,12 @@ using namespace glm;
 #include <common/objloader.hpp>
 #include <boost/graph/adjacency_list.hpp>
 
-
 #include "CImg.h"
+#include <common/nanoflann.hpp>
 
 using namespace cimg_library;
 using namespace boost; 
+using namespace nanoflann;
 
 
 #define WIDTH 1024
@@ -40,6 +41,50 @@ using namespace boost;
 
 
 using namespace std;
+
+
+
+struct PointCloud
+{
+
+	std::vector<vec2>  pts;
+
+	// Must return the number of data points
+	inline size_t kdtree_get_point_count() const { return pts.size(); }
+
+	// Returns the distance between the vector "p1[0:size-1]" and the data point with index "idx_p2" stored in the class:
+	inline double kdtree_distance(const double *p1, const size_t idx_p2,size_t size) const
+	{
+        const double d0=p1[0]-pts[idx_p2][0];
+		const double d1=p1[1]-pts[idx_p2][1];
+		return d0*d0+d1*d1;
+	}
+
+	// Returns the dim'th component of the idx'th point in the class:
+	// Since this is inlined and the "dim" argument is typically an immediate value, the
+	//  "if/else's" are actually solved at compile time.
+	inline double kdtree_get_pt(const size_t idx, int dim) const
+	{
+		if (dim==0) return pts[idx][0];
+		else return pts[idx][1];
+	}
+
+	// Optional bounding-box computation: return false to default to a standard bbox computation loop.
+	//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
+	//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
+	template <class BBOX>
+	bool kdtree_get_bbox(BBOX &bb) const { return false; }
+
+};
+
+// construct a kd-tree index:
+typedef KDTreeSingleIndexAdaptor<
+	L2_Simple_Adaptor<double, PointCloud >,
+	PointCloud,
+	2 /* dim */
+	> kd_tree;
+    
+
 struct Road
 {
     bool left, right, up, down;
@@ -57,11 +102,15 @@ struct Road
 
 struct Mesh
 {
+    Mesh()
+    {
+    };
     Mesh(vector<VertexData> vert, vector<unsigned int> ind, GLuint pID, GLuint Tex, GLuint RoadM = NULL)
     {
 
         move = vec3(0,0,0);
         rot = vec3(0,0,0);
+        postMove = vec3(0,0,0);
 
 
         programID = pID;
@@ -114,7 +163,7 @@ struct Mesh
 		computeMatricesFromInputs();
 		glm::mat4 ProjectionMatrix = getProjectionMatrix();
 		glm::mat4 ViewMatrix = getViewMatrix();
-		glm::mat4 ModelMatrix = glm::translate(glm::mat4(1.0), move) * glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0.0f, 0.0f, 1.0f));
+        glm::mat4 ModelMatrix = glm::translate(glm::mat4(1.0), move) * glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::translate(glm::mat4(1.0), postMove);
 	    
         //mov += 0.01;
 		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
@@ -146,6 +195,11 @@ struct Mesh
 		glDisableVertexAttribArray(2);
 		glDisableVertexAttribArray(3);
     }
+    glm::mat4 getModelMatrix()
+    {
+        glm::mat4 ModelMatrix = glm::translate(glm::mat4(1.0), move) * glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::translate(glm::mat4(1.0), postMove);
+	    return ModelMatrix;
+    }
     ~Mesh()
     {
         //glDeleteBuffers(1, &vertices.second);
@@ -158,10 +212,130 @@ struct Mesh
     pair<vector<VertexData>,GLuint> vertices;
     pair<vector<unsigned int>,GLuint> indices;
     int num_indices;
-    vec3 move, rot;
+    vec3 move, rot, postMove;
     GLuint MatrixID, ModelMatrixID, ViewMatrixID, programID, TextureID, Texture;
     GLuint RoadID, RoadMap;
 
+};
+
+struct Car
+{
+    Car(Mesh m, Mesh s, double ts, vector<pair<double,double>> p, int i)
+    {
+        progress = 0;
+        timescale = ts;
+        path = p;
+        mesh = m;
+        shadow = s;
+        loc = vec2(p[0].first,p[0].second);
+        finished = false;
+        id = i;
+        waittime = 0;
+    };
+    Car(){};
+    void draw(double elapsed, kd_tree& index, vector<Car>& cars)
+    {
+        double query_pt[2] = {mesh.move[0],mesh.move[2]};
+        
+		const double radius = 30.0;
+
+		std::vector<std::pair<size_t,double> > ret_matches;
+		RadiusResultSet<double,size_t> resultSet(radius,ret_matches);
+
+		const size_t nMatches = index.radiusSearch(&query_pt[0],radius, ret_matches, nanoflann::SearchParams());
+
+        /*
+        bool colliding = false;
+        bool removewait = true;
+
+        for (size_t k=0;k<nMatches;k++)
+        {
+            if (id != ret_matches[k].first && !cars[ret_matches[k].first].finished)
+            {
+                Car* t = &cars[ret_matches[k].first];
+                vec2 tdest = t->dest;
+
+                if (glm::distance<float>(dest, tdest) < 1.0 || glm::distance<float>(dest, td))
+                {
+                    if (waittime < t->waittime)
+                    {
+                        colliding = true;
+                    }
+                    else if (waittime == 0)
+                    {
+                        colliding = true;
+                        waittime += double(rand()%1000)/100000.0;
+                    }
+                    else
+                    {
+                        removewait = false;
+                    }
+                }
+            }
+        }
+        if (!colliding)
+        {
+            progress += elapsed/timescale;
+            if (removewait)
+            waittime = 0;
+        }
+        else
+            waittime += elapsed/timescale;
+        */
+        progress += elapsed/timescale;
+        if (!finished)
+        {
+            
+            int lele = path.size()-1;
+            int low = std::min<int>(floor(progress), lele);
+            int high = std::min<int>(ceil(progress), lele);
+            int vhigh = std::min<int>(high+1,lele);
+            double diff = std::min<double>(progress-floor(progress), 1.0);
+            
+            if (low == lele)
+                finished = true;
+            if (vhigh > high)
+            {
+                vec2 dir1 = vec2(path[high].first-path[low].first, path[high].second - path[low].second);
+                double rot1 = atan2(dir1[0],dir1[1])*180.0/3.141592;
+                vec2 dir2 = vec2(path[vhigh].first-path[high].first, path[vhigh].second - path[high].second);
+                double rot2 = atan2(dir2[0],dir2[1])*180.0/3.141592;
+                mesh.rot[1] = rot1*(1.0-diff)+rot2*diff;
+                dest = vec2(path[vhigh].first,path[vhigh].second);
+
+            }
+            else
+            {
+                vec2 dir1 = vec2(path[high].first-path[high-1].first, path[high].second - path[high-1].second);
+                double rot1 = atan2(dir1[0],dir1[1])*180.0/3.141592;
+                mesh.rot[1] = rot1;
+                dest = vec2(path[vhigh].first,path[vhigh].second);
+            }
+
+
+            vec2 moving = vec2(path[low].first*(1.0-diff)+path[high].first*diff,path[low].second*(1.0-diff)+path[high].second*diff);
+            
+            glm::mat4 ModelMatrix = mesh.getModelMatrix();
+
+            vec4 spot = ModelMatrix * vec4(0.5+moving[0], -3.999, 0.5+moving[1],1.0);
+
+            loc = vec2(spot[0],spot[2]);
+
+            mesh.move = vec3(0.5+moving[0], -3.999, 0.5+moving[1]);
+
+            shadow.move = mesh.move;
+            shadow.rot = mesh.rot;
+        }
+        shadow.draw();
+        mesh.draw();
+    }
+    double progress, timescale, waittime;
+    vec2 loc, dest;
+    vector<pair<double,double>> path;
+    Mesh mesh;
+    Mesh shadow;
+    bool finished;
+    int id;
 };
 
 
@@ -257,9 +431,11 @@ int startup()
 	glEnable(GL_DEPTH_TEST);
 	// Accept fragment if it closer to the camera than the former one
 	glDepthFunc(GL_LESS); 
-
+    glBlendFunc(GL_ONE,GL_ONE_MINUS_SRC_ALPHA);       // Blending Function For Translucency Based On Source Alpha 
+    glEnable(GL_BLEND);     // Turn Blending On
+    glEnable(GL_ALPHA_TEST);
 	// Cull triangles which normal is not towards the camera
-	glEnable(GL_CULL_FACE);
+	//glEnable(GL_CULL_FACE);
     
 
     glMatrixMode( GL_PROJECTION ); //Switch to setting the camera perspective
@@ -295,6 +471,66 @@ double fps(int& nbFrames, double& totalTime, double& lastTime, double &last)
 		lastTime += 1.0;
 	}
     return diff; 
+}
+
+
+void createRect(vector<VertexData>& vertex_data,vector<unsigned int>& indices, vec2 i, vec2 j, double height)
+{
+    int index = 0;
+    VertexData data;
+    data.texInd[0] = -1;
+    data.position[0] = i[0];
+    data.position[1] = height;
+    data.position[2] = j[0];
+    data.normal[0] = 0;
+    data.normal[1] = 1;
+    data.normal[2] = 0;
+    data.textureCoord[0] = 0;
+    data.textureCoord[1] = 0;
+    vertex_data.push_back(data);
+
+
+    data.position[0] = i[1];
+    data.position[1] = height;
+    data.position[2] = j[0];
+    data.normal[0] = 0;
+    data.normal[1] = 1;
+    data.normal[2] = 0;
+    data.textureCoord[0] = 1;
+    data.textureCoord[1] = 0;
+    vertex_data.push_back(data);
+
+
+    data.position[0] = i[0];
+    data.position[1] = height;
+    data.position[2] = j[1];
+    data.normal[0] = 0;
+    data.normal[1] = 1;
+    data.normal[2] = 0;
+    data.textureCoord[0] = 0;
+    data.textureCoord[1] = 1;
+    vertex_data.push_back(data);
+
+
+    data.position[0] = i[1];
+    data.position[1] = height;
+    data.position[2] = j[1];
+    data.normal[0] = 0;
+    data.normal[1] = 1;
+    data.normal[2] = 0;
+    data.textureCoord[0] = 1;
+    data.textureCoord[1] = 1;
+    vertex_data.push_back(data);
+
+
+    indices.push_back(index);
+    indices.push_back(index+2);
+    indices.push_back(index+1);
+
+    indices.push_back(index+3);
+    indices.push_back(index+1);
+    indices.push_back(index+2);
+
 }
 
 void createSquare(double i, double j, vector<VertexData>& vertex_data, vector<unsigned int>& indices, int &index, vec4 height = vec4(0,0,0,0), double scale = 1)

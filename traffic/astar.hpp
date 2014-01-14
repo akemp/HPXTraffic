@@ -7,8 +7,6 @@
 
 // The world map
 
-int MAP_WIDTH = 0;
-int MAP_HEIGHT = 0;
 
 vector<vector<int>> mapper;
 
@@ -18,9 +16,9 @@ int GetMap( int x, int y )
 {
 
 	if( x < 0 ||
-	    x >= MAP_WIDTH ||
+	    x >= mapper.size() ||
 		 y < 0 ||
-		 y >= MAP_HEIGHT
+		 y >= mapper[0].size()
 	  )
 	{
 		return 9;	 
