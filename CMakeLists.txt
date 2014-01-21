@@ -59,12 +59,13 @@ add_definitions(
 
 
 set (sources 
-    	traffic/CImg.h
-    	traffic/fsa.h
-    	traffic/stlastar.h
+    traffic/CImg.h
+    traffic/fsa.h
+    traffic/stlastar.h
 	traffic/astar.hpp
 	traffic/main.cpp
-    	traffic/headers.hpp
+    traffic/headers.hpp
+    traffic/vehicles.hpp
 	traffic/util.cpp
 	traffic/util.hpp
 	traffic/vert.glsl

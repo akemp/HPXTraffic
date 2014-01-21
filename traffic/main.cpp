@@ -1,5 +1,6 @@
 #include "headers.hpp"
 #include "astar.hpp"
+#include "vehicles.hpp"
 
 int main( void )
 {
@@ -48,8 +49,9 @@ int main( void )
         vector<pair<double,double>> path;
 		// Create a start state
 		MapSearchNode nodeStart;
-		nodeStart.x = accessLocs[i][0];
-		nodeStart.y = accessLocs[i][1]; 
+        int start = rand()%(accessLocs.size());
+		nodeStart.x = accessLocs[start][0];
+		nodeStart.y = accessLocs[start][1]; 
 
 		// Define the goal state
 		MapSearchNode nodeEnd;
@@ -169,11 +171,10 @@ int main( void )
     
     //car.move = vec3(0.5, -4.0, 0.75);
     double timescale = 200.0;
-    car.postMove = vec3(-0.25,0, 0.25);
-    shadow.postMove = vec3(-0.25,0, 0.25);
+    vec3 postMove = vec3(-0.25,0, 0.25);
     for (int i = 0; i < paths.size(); ++i)
     {
-        cars.push_back(Car(car,shadow,timescale,paths[i], i));
+        cars.push_back(Car(car,shadow,timescale,paths[i], i, postMove));
     }
 
 	double lastTime = glfwGetTime();
