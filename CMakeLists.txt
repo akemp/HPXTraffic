@@ -89,6 +89,8 @@ add_executable(traffic
 target_link_libraries(traffic
 	${ALL_LIBS}
 	assimp
+	SDL2
+	SDL2main
 )
 
 create_target_launcher(traffic WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/traffic/")

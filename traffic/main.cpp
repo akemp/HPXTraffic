@@ -2,7 +2,7 @@
 #include "astar.hpp"
 #include "vehicles.hpp"
 
-int main( void )
+int runProgram()
 {
     int width = 64, height = width;
 	// Our problem defines the world as a 2d array representing a terrain
@@ -221,5 +221,38 @@ int main( void )
 	glfwTerminate();
 
     return 0;
+}
+
+int debugTiles()
+{
+    int width = 64, height = width;
+	// Our problem defines the world as a 2d array representing a terrain
+	// Each element contains an integer from 0 to 5 which indicates the cost 
+	// of travel across the terrain. Zero means the least possible difficulty 
+	// in travelling (think ice rink if you can skate) whilst 5 represents the 
+	// most difficult. 9 indicates that we cannot pass.
+    
+    vector<ivec2> accessLocs;
+    vector<vector<int>> zones(width, vector<int>(height, 9));
+    
+    for (int i = 0; i < width; ++i)
+    {
+        for (int j = 0; j < height; ++j)
+        {
+            if (i % 20 == 0 || j % 8 == 0)
+            {
+                zones[i][j] = 1;
+                accessLocs.push_back(ivec2(i,j));
+            }
+        }
+    }
+
+	return 0;
+}
+
+int main( void )
+{
+	debugTiles();
+	return 0;
 }
 
