@@ -22,8 +22,8 @@ struct Car
         resttime = 0;
         rot = 0;
         
-        m.postMove = postMove;
-        s.postMove = postMove;
+        m.postMove = vec3(0,0,0);
+        s.postMove = vec3(0,0,0);
         dest = vec2(0,0);
 
         for (int i = 0; i < p.size(); ++i)
@@ -44,7 +44,7 @@ struct Car
 
             colpath.push_back(pair<double,double>(spot[0],spot[2]));
         }
-        path = p;
+        //path = p;
         mesh = m;
         shadow = s;
         loc = vec2(colpath[0].first,colpath[0].second);
@@ -119,19 +119,26 @@ struct Car
         if (!finished)
         {
             
-            int lele = path.size()-1;
+            int lele =colpath.size()-1;
             int low = std::min<int>(floor(progress), lele);
-            int high = std::min<int>(ceil(progress), lele);
+            int high = std::min<int>(low+1, lele);
             int vhigh = std::min<int>(high+1,lele);
             double diff = std::min<double>(progress-floor(progress), 1.0);
             
             if (low == lele)
                 finished = true;
+            vec2 moving;
+            if (low != high || low <= 0)
+                moving = vec2(colpath[low].first*(1.0-diff)+colpath[high].first*diff,colpath[low].second*(1.0-diff)+colpath[high].second*diff);
+            else
+                moving = vec2(colpath[high-1].first*(1.0-diff)+colpath[high].first*diff,colpath[high-1].second*(1.0-diff)+colpath[high].second*diff);
+
+
             if (vhigh > high)
             {
-                vec2 dir1 = vec2(path[high].first-path[low].first, path[high].second - path[low].second);
+                vec2 dir1 = vec2(colpath[high].first-colpath[low].first,colpath[high].second -colpath[low].second);
                 double rot1 = atan2(dir1[0],dir1[1])*180.0/3.141592;
-                vec2 dir2 = vec2(path[vhigh].first-path[high].first, path[vhigh].second - path[high].second);
+                vec2 dir2 = vec2(colpath[vhigh].first-colpath[high].first,colpath[vhigh].second -colpath[high].second);
                 double rot2 = atan2(dir2[0],dir2[1])*180.0/3.141592;
                 mesh.rot[1] = rot1*(1.0-diff)+rot2*diff;
                 dest =  dir1*float(1.0f-diff);
@@ -141,23 +148,19 @@ struct Car
             }
             else
             {
-                vec2 dir1 = vec2(path[high].first-path[high-1].first, path[high].second - path[high-1].second);
-                double rot1 = atan2(dir1[0],dir1[1])*180.0/3.141592;
-                mesh.rot[1] = rot1;
-                dest = dir1;
+                //vec2 dir1 = vec2(colpath[high].first-moving[high-1],colpath[high].second-moving[1]);
+                //double rot1 = atan2(dir1[0],dir1[1])*180.0/3.141592;
+                //mesh.rot[1] = rot1;
+                //dest = dir1;
                 //dest = vec2(path[vhigh].first,path[vhigh].second);
             }
 
 
-            vec2 moving = vec2(colpath[low].first*(1.0-diff)+colpath[high].first*diff,colpath[low].second*(1.0-diff)+colpath[high].second*diff);
-            
             mesh.move = vec3(moving[0], -3.999, moving[1]);
 
             loc = vec2(mesh.move[0],mesh.move[2]);
 
             rot = mesh.rot[1];
-            mesh.postMove = vec3(0,0,0);
-            shadow.postMove = vec3(0,0,0);
 
             shadow.move = mesh.move;
             shadow.rot = mesh.rot;
@@ -169,7 +172,7 @@ struct Car
     }
     double progress, timescale, waittime;
     vec2 loc, dest;
-    vector<pair<double,double>> path;
+    //vector<pair<double,double>>colpath;
     vector<pair<double,double>> colpath;
     Mesh mesh;
     Mesh shadow;
