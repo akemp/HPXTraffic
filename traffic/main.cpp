@@ -186,6 +186,7 @@ int runProgram()
         double elapsed = fps(nbFrames, totalTime, lastTime, last);
 		// Clear the screen
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		computeMatricesFromInputs();
         
         terrain.draw();
         roads.draw();
@@ -226,7 +227,7 @@ int runProgram()
 int debugTiles()
 {
 
-    int code = startup();
+    int code = startup(800,800,true);
     if (code != 0)
         return code;
 	
@@ -237,10 +238,16 @@ int debugTiles()
 	vector<VertexData> vert;
 	vector<unsigned int> indices;
 	int count = 0;
+	double scale = 1.0/64.0;
+	for (int i = 0; i < 64; ++i)
+	{
+		for (int j = 0; j < 64; ++j)
+		{
+			createSquare(i*scale,j*scale,vert,indices,count,vec4(0,0,0,0),scale,1.0);//,height,scale);
+		}
+	}
 	
-    createSquare(0,0,vert,indices,count);//,height,scale);
-	
-	Mesh m(vert, indices, LoadShaders( "vert2d.glsl", "frag2d.glsl" ), loadDDS("asphalt.dds"));
+	Mesh2d m(vert, indices, LoadShaders( "vert2d.glsl", "frag2d.glsl" ), loadDDS("asphalt.dds"));
 
 	do{
 		// Clear the screen

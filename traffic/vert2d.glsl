@@ -1,10 +1,4 @@
 #version 330
-#define cars 512
-
-uniform mat4 projection;
-uniform mat4 modelview;
-uniform mat4 model;
-
 layout(location = 0) in vec3 vert1;
 layout(location = 1) in vec3 normal_modelspace;
 layout(location = 2) in vec2 tex_coords;
@@ -23,7 +17,7 @@ void main()
 
     // convert from 0->2 to -1->+1 (clipspace)
     vec2 clipSpace = zeroToTwo - vec2(1.0);
-	tex_coords_frag = vert1.xz;	
+	tex_coords_frag = tex_coords;	
     gl_Position = vec4(clipSpace,0.0,1.0);
 
 }

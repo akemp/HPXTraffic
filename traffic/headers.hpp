@@ -98,6 +98,80 @@ struct Road
     }
 };
 
+
+struct Mesh2d
+{
+    Mesh2d()
+    {
+    };
+    Mesh2d(vector<VertexData> vert, vector<unsigned int> ind, GLuint pID, GLuint Tex)
+    {
+
+        programID = pID;
+	    // Get a handle for our "myTextureSampler" uniform
+	    TextureID  = glGetUniformLocation(programID, "tex");
+        Texture = Tex;
+
+		glGenBuffers(1, &vertices.second);
+        vertices.first = vert;
+        glBindBuffer(GL_ARRAY_BUFFER, vertices.second);
+        glBufferData(GL_ARRAY_BUFFER, vertices.first.size()*sizeof(VertexData), &vertices.first[0], GL_STATIC_DRAW);
+
+        glGenBuffers(1, &indices.second);
+	    indices.first = (ind);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.second);
+        num_indices = indices.first.size();
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, num_indices*sizeof(unsigned int), &indices.first[0], GL_STATIC_DRAW);
+    };
+
+    void draw()
+    {
+        
+		// Use our shader
+		glUseProgram(programID);
+        
+		// Bind our texture in Texture Unit 0
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, Texture);
+		glUniform1i(TextureID, 0);
+
+		glEnableVertexAttribArray(0);
+		glEnableVertexAttribArray(1);
+		glEnableVertexAttribArray(2);
+		glEnableVertexAttribArray(3);
+
+        
+        
+        glBindBuffer(GL_ARRAY_BUFFER, vertices.second);
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (GLvoid*)0);
+		glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(VertexData), (GLvoid*)(3*sizeof(GLfloat)));
+		glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(VertexData), (GLvoid*)(6*sizeof(GLfloat)));
+		glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(VertexData), (GLvoid*)(8*sizeof(GLfloat)));
+        
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indices.second);
+        glDrawElements(GL_TRIANGLES, num_indices, GL_UNSIGNED_INT, 0);
+
+		glDisableVertexAttribArray(0);
+		glDisableVertexAttribArray(1);
+		glDisableVertexAttribArray(2);
+		glDisableVertexAttribArray(3);
+    }
+    ~Mesh2d()
+    {
+        //glDeleteBuffers(1, &vertices.second);
+        //glDeleteBuffers(1, &indices.second);
+	    // Cleanup VBO and shader
+	    //glDeleteProgram(programID);
+	    //glDeleteTextures(1, &Texture);
+    }
+
+    pair<vector<VertexData>,GLuint> vertices;
+    pair<vector<unsigned int>,GLuint> indices;
+    int num_indices;
+    GLuint MatrixID, ModelMatrixID, ViewMatrixID, programID, TextureID, Texture;
+
+};
+
 struct Mesh
 {
     Mesh()
@@ -158,7 +232,6 @@ struct Mesh
         }
 
 		// Compute the MVP matrix from keyboard and mouse input
-		computeMatricesFromInputs();
 		glm::mat4 ProjectionMatrix = getProjectionMatrix();
 		glm::mat4 ViewMatrix = getViewMatrix();
         glm::mat4 ModelMatrix = glm::translate(glm::mat4(1.0), move) * glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::translate(glm::mat4(1.0), postMove);
@@ -263,7 +336,7 @@ GLuint createMap(vector<Road> roads, int width, int height){
 }
 
 
-int startup()
+int startup(int W = WIDTH, int H = HEIGHT, bool use2d = false)
 {
 	// Initialise GLFW
 	if( !glfwInit() )
@@ -278,7 +351,7 @@ int startup()
 	glfwOpenWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
 	// Open a window and create its OpenGL context
-	if( !glfwOpenWindow( WIDTH, HEIGHT, 0,0,0,0, 32,0, GLFW_WINDOW ) )
+	if( !glfwOpenWindow( W, H, 0,0,0,0, 32,0, GLFW_WINDOW ) )
 	{
 		fprintf( stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3 compatible. Try the 2.1 version of the tutorials.\n" );
 		glfwTerminate();
@@ -291,15 +364,18 @@ int startup()
 		fprintf(stderr, "Failed to initialize GLEW\n");
 		return -1;
 	}
-    glfwDisable( GLFW_MOUSE_CURSOR );
 
+	if (!use2d)
+	{
+		glfwDisable( GLFW_MOUSE_CURSOR );
+		glfwSetMousePos(WIDTH/2, HEIGHT/2);
+	}
 
 
 	glfwSetWindowTitle( "Traffic sim" );
 
 	// Ensure we can capture the escape key being pressed below
 	glfwEnable( GLFW_STICKY_KEYS );
-	glfwSetMousePos(WIDTH/2, HEIGHT/2);
 
 	// Dark blue background
 	glClearColor(0.95f, 0.95f, 0.95f, 0.0f);
@@ -411,18 +487,19 @@ void createRect(vector<VertexData>& vertex_data,vector<unsigned int>& indices, v
 
 }
 
-void createSquare(double i, double j, vector<VertexData>& vertex_data, vector<unsigned int>& indices, int &index, vec4 height = vec4(0,0,0,0), double scale = 1)
+void createSquare(double i, double j, vector<VertexData>& vertex_data, vector<unsigned int>& indices, int &index,
+	vec4 height = vec4(0,0,0,0), double scale = 1, double texInd = -1)
 {
     VertexData data;
-    data.texInd[0] = -1;
+    data.texInd[0] = texInd;
     data.position[0] = i;
     data.position[1] = height[0];
     data.position[2] = j;
     data.normal[0] = 0;
     data.normal[1] = 1;
     data.normal[2] = 0;
-    data.textureCoord[0] = i;
-    data.textureCoord[1] = j;
+    data.textureCoord[0] = 0;
+    data.textureCoord[1] = 0;
     vertex_data.push_back(data);
 
 
@@ -432,8 +509,8 @@ void createSquare(double i, double j, vector<VertexData>& vertex_data, vector<un
     data.normal[0] = 0;
     data.normal[1] = 1;
     data.normal[2] = 0;
-    data.textureCoord[0] = i+scale;
-    data.textureCoord[1] = j;
+    data.textureCoord[0] = 1;
+    data.textureCoord[1] = 0;
     vertex_data.push_back(data);
 
 
@@ -443,8 +520,8 @@ void createSquare(double i, double j, vector<VertexData>& vertex_data, vector<un
     data.normal[0] = 0;
     data.normal[1] = 1;
     data.normal[2] = 0;
-    data.textureCoord[0] = i;
-    data.textureCoord[1] = j+scale;
+    data.textureCoord[0] = 0;
+    data.textureCoord[1] = 1;
     vertex_data.push_back(data);
 
 
@@ -454,8 +531,8 @@ void createSquare(double i, double j, vector<VertexData>& vertex_data, vector<un
     data.normal[0] = 0;
     data.normal[1] = 1;
     data.normal[2] = 0;
-    data.textureCoord[0] = i+scale;
-    data.textureCoord[1] = j+scale;
+    data.textureCoord[0] = 1;
+    data.textureCoord[1] = 1;
     vertex_data.push_back(data);
 
 
