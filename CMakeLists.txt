@@ -71,6 +71,8 @@ set (sources
 	traffic/vert.glsl
 	traffic/frag.glsl
 	traffic/fragTerra.glsl
+	traffic/vert2d.glsl
+	traffic/frag2d.glsl
 	common/controls.cpp
 	common/controls.hpp
 	common/nanoflann.hpp
@@ -89,8 +91,6 @@ add_executable(traffic
 target_link_libraries(traffic
 	${ALL_LIBS}
 	assimp
-	SDL2
-	SDL2main
 )
 
 create_target_launcher(traffic WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/traffic/")

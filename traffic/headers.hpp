@@ -28,10 +28,8 @@ using namespace glm;
 #include <common/objloader.hpp>
 #include <boost/graph/adjacency_list.hpp>
 
-#include "CImg.h"
 #include <common/nanoflann.hpp>
 
-using namespace cimg_library;
 using namespace boost; 
 using namespace nanoflann;
 

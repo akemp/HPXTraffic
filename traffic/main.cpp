@@ -225,27 +225,39 @@ int runProgram()
 
 int debugTiles()
 {
-    int width = 64, height = width;
-	// Our problem defines the world as a 2d array representing a terrain
-	// Each element contains an integer from 0 to 5 which indicates the cost 
-	// of travel across the terrain. Zero means the least possible difficulty 
-	// in travelling (think ice rink if you can skate) whilst 5 represents the 
-	// most difficult. 9 indicates that we cannot pass.
-    
-    vector<ivec2> accessLocs;
-    vector<vector<int>> zones(width, vector<int>(height, 9));
-    
-    for (int i = 0; i < width; ++i)
-    {
-        for (int j = 0; j < height; ++j)
-        {
-            if (i % 20 == 0 || j % 8 == 0)
-            {
-                zones[i][j] = 1;
-                accessLocs.push_back(ivec2(i,j));
-            }
-        }
-    }
+
+    int code = startup();
+    if (code != 0)
+        return code;
+	
+	GLuint VertexArrayID;
+	glGenVertexArrays(1, &VertexArrayID);
+	glBindVertexArray(VertexArrayID);
+
+	vector<VertexData> vert;
+	vector<unsigned int> indices;
+	int count = 0;
+	
+    createSquare(0,0,vert,indices,count);//,height,scale);
+	
+	Mesh m(vert, indices, LoadShaders( "vert2d.glsl", "frag2d.glsl" ), loadDDS("asphalt.dds"));
+
+	do{
+		// Clear the screen
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+		m.draw();
+
+		glfwSwapBuffers();
+        
+	} // Check if the ESC key was pressed or the window was closed
+	while( glfwGetKey( GLFW_KEY_ESC ) != GLFW_PRESS &&
+		   glfwGetWindowParam( GLFW_OPENED ) );
+
+
+	// Close OpenGL window and terminate GLFW
+	glfwTerminate();
+
 
 	return 0;
 }
