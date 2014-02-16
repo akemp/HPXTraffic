@@ -271,7 +271,7 @@ int debugTiles()
 
 int main( void )
 {
-	debugTiles();
+	runProgram();
 	return 0;
 }
 

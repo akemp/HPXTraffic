@@ -66,8 +66,6 @@ set (sources
 	traffic/main.cpp
     traffic/headers.hpp
     traffic/vehicles.hpp
-	traffic/util.cpp
-	traffic/util.hpp
 	traffic/vert.glsl
 	traffic/frag.glsl
 	traffic/fragTerra.glsl
