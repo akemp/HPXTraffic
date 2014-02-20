@@ -1,117 +1,46 @@
 #include "headers.hpp"
-#include "astar.hpp"
-#include "vehicles.hpp"
+
+//#include "vehicles.hpp"
+typedef adjacency_list < listS, vecS, directedS,
+no_property, property < edge_weight_t, double > > graph_t;
+typedef graph_traits < graph_t >::vertex_descriptor vertex_descriptor;
+typedef std::pair<int, int> Edge;
+
+void outputPath(vector<int> nodes, graph_t g, char* name,  property_map<graph_t, edge_weight_t>::type weightmap, string path)
+{
+  ofstream dot_file(path + ".dot");
+
+  dot_file << "digraph D {\n"
+    << "  rankdir=LR\n"
+    << "  size=\"4,3\"\n"
+    << "  ratio=\"fill\"\n"
+    << "  edge[style=\"bold\"]\n" << "  node[shape=\"circle\"]\n";
+  int indexer = 0;
+  graph_traits < graph_t >::edge_iterator ei, ei_end;
+  for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei) {
+    graph_traits < graph_t >::edge_descriptor e = *ei;
+    graph_traits < graph_t >::vertex_descriptor
+      u = source(e, g), v = target(e, g);
+    dot_file << name[u] << " -> " << name[v]
+      << "[label=\"" << get(weightmap, e) << "\"";
+      bool contains = false;
+      if (indexer < nodes.size() &&  nodes[indexer] == v)
+      {
+        dot_file << ", color=\"black\"";
+        indexer++;
+      }
+    else
+      dot_file << ", color=\"grey\"";
+    dot_file << "]";
+  }
+  dot_file << "}";
+  return;
+}
 
 int runProgram()
 {
     int width = 64, height = width;
-	// Our problem defines the world as a 2d array representing a terrain
-	// Each element contains an integer from 0 to 5 which indicates the cost 
-	// of travel across the terrain. Zero means the least possible difficulty 
-	// in travelling (think ice rink if you can skate) whilst 5 represents the 
-	// most difficult. 9 indicates that we cannot pass.
-    
-    vector<vector<int>> zones(width, vector<int>(height, 9));
-    
-    vector<ivec2> accessLocs;
-    for (int i = 0; i < width; ++i)
-    {
-        for (int j = 0; j < height; ++j)
-        {
-            if (i % 20 == 0 || j % 8 == 0)
-            {
-                zones[i][j] = 1;
-                accessLocs.push_back(ivec2(i,j));
-            }
-        }
-    }
 
-
-	// Create an instance of the search class...
-
-
-    for (int i = 0; i < width; ++i)
-    {
-        vector<int> tmap;
-        for (int j = 0; j < height; ++j)
-        {
-            tmap.push_back(zones[i][j]);
-        }
-        mapper.push_back(tmap);
-    }
-
-	AStarSearch<MapSearchNode> astarsearch;
-    
-    vector<vector<pair<double,double>>> paths;
-    for (int i = 0; i < 100; ++i)
-	{
-        
-        vector<pair<double,double>> path;
-		// Create a start state
-		MapSearchNode nodeStart;
-        int start = rand()%(accessLocs.size());
-		nodeStart.x = accessLocs[start][0];
-		nodeStart.y = accessLocs[start][1]; 
-
-		// Define the goal state
-		MapSearchNode nodeEnd;
-        int dest = rand()%(accessLocs.size());
-		nodeEnd.x = accessLocs[dest][0];						
-		nodeEnd.y = accessLocs[dest][1]; 
-		
-		// Set Start and goal states
-		
-		astarsearch.SetStartAndGoalStates( nodeStart, nodeEnd );
-
-		unsigned int SearchState;
-		unsigned int SearchSteps = 0;
-
-		do
-		{
-			SearchState = astarsearch.SearchStep();
-
-			SearchSteps++;
-
-
-		}
-		while( SearchState == AStarSearch<MapSearchNode>::SEARCH_STATE_SEARCHING );
-
-		if( SearchState == AStarSearch<MapSearchNode>::SEARCH_STATE_SUCCEEDED )
-		{
-
-				MapSearchNode *node = astarsearch.GetSolutionStart();
-
-				int steps = 0;
-
-                path.push_back(node->GetNodeInfo());
-				for( ;; )
-				{
-					node = astarsearch.GetSolutionNext();
-
-					if( !node )
-					{
-						break;
-					}
-
-                    path.push_back(node->GetNodeInfo());
-					steps ++;
-				
-				};
-
-                paths.push_back(path);
-				// Once you're done with the solution you can free the nodes up
-				astarsearch.FreeSolutionNodes();
-
-	
-		}
-		else if( SearchState == AStarSearch<MapSearchNode>::SEARCH_STATE_FAILED ) 
-		{
-			cout << "Search terminated. Did not find goal state\n";
-		
-		}
-
-		astarsearch.EnsureMemoryFreed();
-	}
 
     int code = startup();
     if (code != 0)
@@ -135,13 +64,6 @@ int runProgram()
 
     Mesh terrain(vertex_data,indices, LoadShaders( "vert.glsl", "frag.glsl" ), loadDDS("dirt.dds"));//, createMap(roads,width,height));
     
-    indices = vector<unsigned int>();
-    vertex_data = vector<VertexData>();
-
-    
-    createSquares(zones,vertex_data,indices);
-
-    Mesh roads(vertex_data,indices, LoadShaders( "vert.glsl", "frag.glsl" ), loadDDS("asphalt.dds"));
     
 	Assimp::Importer importer;
 	const aiScene* scene = importer.ReadFile("car.obj", aiProcess_FlipUVs);
@@ -154,28 +76,6 @@ int runProgram()
     
 
     terrain.move = vec3(0.0,-4.0,0.0);
-    roads.move = vec3(0.0,-3.999,0.0);
-    vector<Car> cars;
-    Mesh car(vertex_data,indices, LoadShaders( "vert.glsl", "frag.glsl" ), loadDDS("delorean.dds"));
-
-
-
-    indices = vector<unsigned int>();
-    vertex_data = vector<VertexData>();
-
-
-    createRect(vertex_data,indices,vec2(0.175,-0.175),vec2(0.4,-0.4),0.01);
-
-    Mesh shadow(vertex_data,indices, LoadShaders( "vert.glsl", "fragTerra.glsl" ), loadDDS("shadow.dds"));
-
-    
-    //car.move = vec3(0.5, -4.0, 0.75);
-    double timescale = 200.0;
-    vec3 postMove = vec3(-0.25,0, 0.25);
-    for (int i = 0; i < paths.size(); ++i)
-    {
-        cars.push_back(Car(car,shadow,timescale,paths[i], i, postMove));
-    }
 
 	double lastTime = glfwGetTime();
 	int nbFrames = 0;
@@ -189,27 +89,8 @@ int runProgram()
 		computeMatricesFromInputs();
         
         terrain.draw();
-        roads.draw();
-
-        
-	    PointCloud cloud;
-
-	    // Generate points:
-        for (int i = 0; i < cars.size(); ++i)
-        {
-            cloud.pts.push_back(vec2(cars[i].mesh.move[0],cars[i].mesh.move[2]));
-        }
 
 
-	    kd_tree   index(2 /*dim*/, cloud, KDTreeSingleIndexAdaptorParams(10 /* max leaf */) );
-	    index.buildIndex();
-
-        
-        for (int i = 0; i < cars.size(); ++i)
-        {
-            cars[i].draw(elapsed,index, cars);
-        }
-        
 		// Swap buffers
 		glfwSwapBuffers();
 
@@ -224,54 +105,51 @@ int runProgram()
     return 0;
 }
 
-int debugTiles()
-{
+int outputPaths()
+{   
 
-    int code = startup(800,800,true);
-    if (code != 0)
-        return code;
-	
-	GLuint VertexArrayID;
-	glGenVertexArrays(1, &VertexArrayID);
-	glBindVertexArray(VertexArrayID);
-
-	vector<VertexData> vert;
-	vector<unsigned int> indices;
-	int count = 0;
-	double scale = 1.0/64.0;
-	for (int i = 0; i < 64; ++i)
-	{
-		for (int j = 0; j < 64; ++j)
-		{
-			createSquare(i*scale,j*scale,vert,indices,count,vec4(0,0,0,0),scale,1.0);//,height,scale);
-		}
-	}
-	
-	Mesh2d m(vert, indices, LoadShaders( "vert2d.glsl", "frag2d.glsl" ), loadDDS("asphalt.dds"));
-
-	do{
-		// Clear the screen
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-		m.draw();
-
-		glfwSwapBuffers();
-        
-	} // Check if the ESC key was pressed or the window was closed
-	while( glfwGetKey( GLFW_KEY_ESC ) != GLFW_PRESS &&
-		   glfwGetWindowParam( GLFW_OPENED ) );
+    const int num_nodes = 5;
+    enum nodes { A, B, C, D, E };
+    char name[] = "ABCDE";
+    Edge edge_array[] = { Edge(A, B), Edge(A, C), Edge(A, D), Edge(A, E),
+         Edge(B, A), Edge(C, A), Edge(D, A), Edge(E, A)
+    };
 
 
-	// Close OpenGL window and terminate GLFW
-	glfwTerminate();
+    double weights[] = { 5, 6, 2, 5.9,2.5, 3.5, 2, 5.9 };
+    int num_arcs = sizeof(edge_array) / sizeof(Edge);
 
+    graph_t g(edge_array, edge_array + num_arcs, weights, num_nodes);
 
-	return 0;
+    property_map<graph_t, edge_weight_t>::type weightmap = get(edge_weight, g);
+    vector<vertex_descriptor> p(num_vertices(g));
+    vector<double> d(num_vertices(g));
+    vertex_descriptor s = vertex(B, g);
+
+    dijkstra_shortest_paths(g, s,
+                            predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
+                            distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g))));
+
+    graph_traits < graph_t >::vertex_iterator vi, vend;
+    vector<int> nodes;
+    {
+        int target = vertex(C, g);
+        vector<double> distances;
+            do{
+                nodes.push_back(target);
+                distances.push_back(d[target]);
+                target = p[target];
+            }while(target != s);
+    }
+
+    outputPath(nodes,  g, name,  weightmap, "out");
+    
+    return 0;
 }
 
 int main( void )
 {
-	runProgram();
+	outputPaths();
 	return 0;
 }
 

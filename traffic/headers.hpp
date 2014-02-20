@@ -10,6 +10,8 @@
 #include <iostream>
 #include <iomanip>
 #include <queue>
+#include <fstream>
+
 
 // Include GLEW
 #include <GL/glew.h>
@@ -26,7 +28,13 @@ using namespace glm;
 #include <common/texture.hpp>
 #include <common/controls.hpp>
 #include <common/objloader.hpp>
+
+
+
+#include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
+#include <boost/property_map/property_map.hpp>
 
 #include <common/nanoflann.hpp>
 
@@ -561,46 +569,6 @@ void createTerrain(int maxx, int maxy, vector<VertexData>& vertex_data, vector<u
              // height /= -heights;
             createSquare(i*scale,j*scale,vertex_data,indices,index);//,height,scale);
         }
-    }
-}
-
-vector<Road> createRoads(vector<vector<int>> zones)
-{
-    vector<Road> roads;
-    for (int i = 0; i < zones.size(); i ++)
-    {
-        for (int j = 0; j < zones[i].size(); j++)
-        {
-            if (zones[i][j] != 9)
-            {
-                Road r(i,j);
-                if (i > 0)
-                    if (zones[i-1][j] != 9)
-                        r.down = true;
-                if (i < zones.size() - 1)
-                    if (zones[i+1][j] != 9)
-                        r.up = true;
-                if (j > 0)
-                    if (zones[i][j-1] != 9)
-                        r.left = true;
-                if (j < zones[0].size() - 1)
-                    if (zones[i][j+1] != 9)
-                        r.right = true;
-                roads.push_back(r);
-            }
-        }
-    }
-    return roads;
-}
-
-void createSquares(vector<vector<int>> zones, vector<VertexData>& vertex_data, vector<unsigned int>& indices)
-{
-    vector<Road> roads = createRoads(zones);
-    int index = 0;
-    for (int i = 0; i < roads.size(); ++i)
-    {
-        Road r = roads[i];
-        createSquare(r.x,r.y,vertex_data,indices,index);
     }
 }
 
