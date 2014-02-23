@@ -5,13 +5,27 @@ no_property, property < edge_weight_t, double > > graph_t;
 typedef graph_traits < graph_t >::vertex_descriptor vertex_descriptor;
 typedef std::pair<int, int> Edge;
 
+struct node
+{
+	vec2 v;
+	vector<int> edges;
+	int index;
+	node();
+	node(vec2 tv, int tindex)
+	{
+		v.x = tv.x;
+		v.y = tv.y;
+		index = tindex;
+	};
+};
+
 void outputPath(vector<int> nodes, graph_t g, vector<string> name,  property_map<graph_t, edge_weight_t>::type weightmap, string path)
 {
   ofstream dot_file(path + ".dot");
 
   dot_file << "digraph D {\n"
     << "  rankdir=LR\n"
-    << "  size=\"4,3\"\n"
+    << "  size=\"25,25\"\n"
     << "  ratio=\"fill\"\n"
     << "  edge[style=\"bold\"]\n" << "  node[shape=\"circle\"]\n";
   int indexer = 0;
@@ -103,39 +117,45 @@ int runProgram()
 
     return 0;
 }
+std::string fts (float number){
+    std::ostringstream buff;
+    buff<<number;
+    return buff.str();   
+}
 
-int outputPaths()
+int makePath(vector<node> spots)
 {   
 
     vector<string> name;
-    name.push_back("A");
-    name.push_back("B");
-    name.push_back("C");
-    name.push_back("D");
-    name.push_back("E");
+	for (int i = 0; i < spots.size(); ++i)
+	{
+		string n;
+		n += "x";
+		n += fts(spots[i].v.x);
+		n += "y";
+		n += fts(spots[i].v.y);
+		name.push_back(n);
+	}
     vector<Edge> edge_vector;
-    edge_vector.push_back(Edge(0, 1));
-    edge_vector.push_back(Edge(0, 2));
-    edge_vector.push_back(Edge(0, 3));
-    edge_vector.push_back(Edge(0, 4));
-    edge_vector.push_back(Edge(1, 0));
-    edge_vector.push_back(Edge(2, 0));
-    edge_vector.push_back(Edge(3, 0));
-    edge_vector.push_back(Edge(4, 0));
-
     vector<double> weight_array;
-    for (int i = 0; i < 8; ++i)
-    {
-        weight_array.push_back(i+1);
-    }
+	for (int i = 0; i < spots.size(); ++i)
+	{
+		vec2 s = spots[i].v;
+		for (int j = 0; j < spots[i].edges.size(); ++j)
+		{
+			edge_vector.push_back(Edge(i,spots[i].edges[j]));
+			vec2 e = spots[spots[i].edges[j]].v;
+			weight_array.push_back(glm::distance(s,e));
+		}
+	}
 
     graph_t g(edge_vector.begin(), edge_vector.end(), weight_array.begin(), name.size());
 
     property_map<graph_t, edge_weight_t>::type weightmap = get(edge_weight, g);
     vector<vertex_descriptor> p(num_vertices(g));
     vector<double> d(num_vertices(g));
-    vertex_descriptor s = vertex(1, g);
-
+    vertex_descriptor s = vertex(0, g);
+	
     dijkstra_shortest_paths(g, s,
                             predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
                             distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g))));
@@ -159,7 +179,46 @@ int outputPaths()
 
 int main( void )
 {
-	outputPaths();
+	vector<node> nodes;
+	int count = 0;
+	vector<vector<int>> indices;
+	int dim = 4;
+	for (int i = 0; i < dim; ++i)
+	{
+		indices.push_back(vector<int>());
+		for (int j = 0; j < dim; ++j)
+		{
+			indices[i].push_back(count);
+			++count;
+		}
+	}
+	count = 0;
+	for (int i = 0; i < dim; ++i)
+	{
+		for (int j = 0; j < dim; ++j)
+		{
+			node spot(vec2(i*10+rand()%5,j*10+rand()%5), count);
+			if (i > 0)
+			{
+				spot.edges.push_back(indices[i-1][j]);
+			}
+			if (j > 0)
+			{
+				spot.edges.push_back(indices[i][j-1]);
+			}
+			if (i < dim-1)
+			{
+				spot.edges.push_back(indices[i+1][j]);
+			}
+			if (j < dim-1)
+			{
+				spot.edges.push_back(indices[i][j+1]);
+			}
+			nodes.push_back(spot);
+			++count;
+		}
+	}
+	makePath(nodes);
 	return 0;
 }
 
