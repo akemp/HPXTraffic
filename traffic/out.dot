@@ -4,4 +4,4 @@ digraph D {
   ratio="fill"
   edge[style="bold"]
   node[shape="circle"]
-A -> B[label="5", color="grey"]A -> C[label="6", color="black"]A -> D[label="2", color="grey"]A -> E[label="5.9", color="grey"]B -> A[label="2.5", color="black"]C -> A[label="3.5", color="grey"]D -> A[label="2", color="grey"]E -> A[label="5.9", color="grey"]}
+A -> B[label="1", color="grey"]A -> C[label="2", color="black"]A -> D[label="3", color="grey"]A -> E[label="4", color="grey"]B -> A[label="5", color="black"]C -> A[label="6", color="grey"]D -> A[label="7", color="grey"]E -> A[label="8", color="grey"]}

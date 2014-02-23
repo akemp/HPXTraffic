@@ -1,12 +1,11 @@
 #include "headers.hpp"
 
-//#include "vehicles.hpp"
 typedef adjacency_list < listS, vecS, directedS,
 no_property, property < edge_weight_t, double > > graph_t;
 typedef graph_traits < graph_t >::vertex_descriptor vertex_descriptor;
 typedef std::pair<int, int> Edge;
 
-void outputPath(vector<int> nodes, graph_t g, char* name,  property_map<graph_t, edge_weight_t>::type weightmap, string path)
+void outputPath(vector<int> nodes, graph_t g, vector<string> name,  property_map<graph_t, edge_weight_t>::type weightmap, string path)
 {
   ofstream dot_file(path + ".dot");
 
@@ -108,23 +107,34 @@ int runProgram()
 int outputPaths()
 {   
 
-    const int num_nodes = 5;
-    enum nodes { A, B, C, D, E };
-    char name[] = "ABCDE";
-    Edge edge_array[] = { Edge(A, B), Edge(A, C), Edge(A, D), Edge(A, E),
-         Edge(B, A), Edge(C, A), Edge(D, A), Edge(E, A)
-    };
+    vector<string> name;
+    name.push_back("A");
+    name.push_back("B");
+    name.push_back("C");
+    name.push_back("D");
+    name.push_back("E");
+    vector<Edge> edge_vector;
+    edge_vector.push_back(Edge(0, 1));
+    edge_vector.push_back(Edge(0, 2));
+    edge_vector.push_back(Edge(0, 3));
+    edge_vector.push_back(Edge(0, 4));
+    edge_vector.push_back(Edge(1, 0));
+    edge_vector.push_back(Edge(2, 0));
+    edge_vector.push_back(Edge(3, 0));
+    edge_vector.push_back(Edge(4, 0));
 
+    vector<double> weight_array;
+    for (int i = 0; i < 8; ++i)
+    {
+        weight_array.push_back(i+1);
+    }
 
-    double weights[] = { 5, 6, 2, 5.9,2.5, 3.5, 2, 5.9 };
-    int num_arcs = sizeof(edge_array) / sizeof(Edge);
-
-    graph_t g(edge_array, edge_array + num_arcs, weights, num_nodes);
+    graph_t g(edge_vector.begin(), edge_vector.end(), weight_array.begin(), name.size());
 
     property_map<graph_t, edge_weight_t>::type weightmap = get(edge_weight, g);
     vector<vertex_descriptor> p(num_vertices(g));
     vector<double> d(num_vertices(g));
-    vertex_descriptor s = vertex(B, g);
+    vertex_descriptor s = vertex(1, g);
 
     dijkstra_shortest_paths(g, s,
                             predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
@@ -133,7 +143,7 @@ int outputPaths()
     graph_traits < graph_t >::vertex_iterator vi, vend;
     vector<int> nodes;
     {
-        int target = vertex(C, g);
+        int target = vertex(2, g);
         vector<double> distances;
             do{
                 nodes.push_back(target);
