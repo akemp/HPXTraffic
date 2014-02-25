@@ -22,7 +22,6 @@
 // Include GLM
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
-using namespace glm;
 
 #include <common/shader.hpp>
 #include <common/texture.hpp>
@@ -36,43 +35,103 @@ using namespace glm;
 #include <boost/graph/dijkstra_shortest_paths.hpp>
 #include <boost/property_map/property_map.hpp>
 
+#include <boost/geometry.hpp>
+#include <boost/geometry/geometries/linestring.hpp>
+#include <boost/geometry/geometries/point_xy.hpp>
+
+//This section of code and parts of its implementation are copied from http://www.richelbilderbeek.nl
+
+template <class T>
+const std::vector<
+  boost::geometry::model::d2::point_xy<T>
+>
+GetLineLineIntersections(
+  const boost::geometry::model::linestring<
+    boost::geometry::model::d2::point_xy<T>
+  > line1,
+  const boost::geometry::model::linestring<
+    boost::geometry::model::d2::point_xy<T>
+  > line2)
+{
+  typedef boost::geometry::model::d2::point_xy<T> Point;
+  typedef boost::geometry::model::linestring<Point> Line;
+  std::vector<Point> points;
+  boost::geometry::intersection(line1,line2,points);
+  assert(points.empty() || points.size() == 1);
+  return points;
+}
+
+template <class T>
+const boost::geometry::model::linestring<boost::geometry::model::d2::point_xy<T>
+>
+CreateLine(const std::vector<boost::geometry::model::d2::point_xy<T> >& v)
+{
+  return boost::geometry::model::linestring<
+    boost::geometry::model::d2::point_xy<T>
+  >(v.begin(),v.end());
+}
+
+struct fuzzy_equal_to
+  : public std::binary_function<double,double,bool>
+{
+  fuzzy_equal_to(const double tolerance = std::numeric_limits<double>::epsilon())
+    : m_tolerance(tolerance)
+  {
+    assert(tolerance >= 0.0);
+  }
+  bool operator()(const double lhs, const double rhs) const
+  {
+    return rhs > (1.0 - m_tolerance) * lhs
+        && rhs < (1.0 + m_tolerance) * lhs;
+  }
+  const double m_tolerance;
+};
+
+typedef boost::geometry::model::d2::point_xy<double> Point;
+typedef boost::geometry::model::linestring<Point> Line;
+
+//end section
+
 #include <common/nanoflann.hpp>
 
+
+
 using namespace boost; 
+using namespace glm;
 using namespace nanoflann;
+using namespace std;
+
+
 
 
 #define WIDTH 1024
 #define HEIGHT 600
 
 
-using namespace std;
-
-
 
 struct PointCloud
 {
 
-	std::vector<vec2>  pts;
+	std::vector<pair<vec2,vec2>>  pts;
 
 	// Must return the number of data points
 	inline size_t kdtree_get_point_count() const { return pts.size(); }
 
 	// Returns the distance between the vector "p1[0:size-1]" and the data point with index "idx_p2" stored in the class:
-	inline double kdtree_distance(const double *p1, const size_t idx_p2,size_t size) const
+	inline float kdtree_distance(const float *p1, const size_t idx_p2,size_t size) const
 	{
-        const double d0=p1[0]-pts[idx_p2][0];
-		const double d1=p1[1]-pts[idx_p2][1];
+        const double d0=p1[0]-pts[idx_p2].first[0];
+        const double d1=p1[1]-pts[idx_p2].first[1];
 		return d0*d0+d1*d1;
 	}
 
 	// Returns the dim'th component of the idx'th point in the class:
 	// Since this is inlined and the "dim" argument is typically an immediate value, the
 	//  "if/else's" are actually solved at compile time.
-	inline double kdtree_get_pt(const size_t idx, int dim) const
+	inline float kdtree_get_pt(const size_t idx, int dim) const
 	{
-		if (dim==0) return pts[idx][0];
-		else return pts[idx][1];
+        if (dim==0) return pts[idx].first[0];
+        else return pts[idx].first[1];
 	}
 
 	// Optional bounding-box computation: return false to default to a standard bbox computation loop.
@@ -85,11 +144,11 @@ struct PointCloud
 
 // construct a kd-tree index:
 typedef KDTreeSingleIndexAdaptor<
-	L2_Simple_Adaptor<double, PointCloud >,
+	L2_Simple_Adaptor<float, PointCloud >,
 	PointCloud,
 	2 /* dim */
 	> kd_tree;
-    
+
 
 struct Road
 {

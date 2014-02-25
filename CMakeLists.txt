@@ -30,6 +30,7 @@ include_directories(
 	external/glew-1.9.0/include/
 	external/assimp-3.0.1270/include/
 	external/bullet-2.81-rev2613/src/
+	external/EasyBMP-1.06 
 	.
 )
 
@@ -37,6 +38,7 @@ set(ALL_LIBS
 	${OPENGL_LIBRARY}
 	GLFW_276
 	GLEW_190
+	EASYBMP_106
 )
 
 add_definitions(
@@ -85,6 +87,7 @@ add_executable(traffic
 target_link_libraries(traffic
 	${ALL_LIBS}
 	assimp
+	
 )
 
 create_target_launcher(traffic WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/traffic/")
