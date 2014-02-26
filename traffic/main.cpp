@@ -56,7 +56,7 @@ void outputPath(vector<Edge> nodes, graph_t g, vector<string> name,  property_ma
   return;
 }
 
-vector<Edge> shortest_path(vertex_descriptor target, vertex_descriptor s, graph_t g, vector<double> d,vector<vertex_descriptor> p)
+vector<Edge> shortest_path(vertex_descriptor target, vertex_descriptor s, graph_t g, const vector<double>& d, const vector<vertex_descriptor>& p)
 {
     
     vector<Edge> nodes;
@@ -70,6 +70,21 @@ vector<Edge> shortest_path(vertex_descriptor target, vertex_descriptor s, graph_
     }
     reverse(nodes.begin(), nodes.end());
     return nodes;
+}
+
+vector<Edge> generate_path(const graph_t &g, vertex_descriptor s, vertex_descriptor t, vector<vertex_descriptor> p, vector<double> d)
+{
+	
+    cout << "\nGenerating paths\n";
+
+    dijkstra_shortest_paths(g, s,
+                            predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
+                            distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g))));
+    
+    cout << "\nGenerated. Outputting path\n";
+
+	
+    return shortest_path(t,s,g,d,p);
 }
 
 int makePath(vector<node> spots)
@@ -110,45 +125,43 @@ int makePath(vector<node> spots)
     property_map<graph_t, edge_weight_t>::type weightmap = get(edge_weight, g);
     vector<vertex_descriptor> p(num_vertices(g));
     vector<double> d(num_vertices(g));
-    vertex_descriptor s = vertex(0, g);
 	
-    cout << "\nGenerating paths\n";
+    vertex_descriptor t = vertex(50, g);
+	for (int l = 0; l < 10; ++l)
+	{
 
-    dijkstra_shortest_paths(g, s,
-                            predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
-                            distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g))));
-    
-    cout << "\nGenerated. Outputting path\n";
+		vertex_descriptor s = vertex(rand()%num_vertices(g), g);
+	
+		vector<Edge> path = generate_path(g,s,t, p, d);
 
-    vertex_descriptor t = vertex(5200, g);
-    vector<Edge> path = shortest_path(t,s,g,d,p);
 
-    for (int i = 0; i < path.size(); ++i)
-    {
-        vec2 s = spots[path[i].first].v+adder;
-        vec2 e = spots[path[i].second].v+adder;
+		for (int i = 0; i < path.size(); ++i)
+		{
+			vec2 s = spots[path[i].first].v+adder;
+			vec2 e = spots[path[i].second].v+adder;
         
-        fout << "<line x1=\"" << s.x << "\" y1=\"" << s.y << "\"";
-        fout << "x2=\"" << e.x << "\" y2=\"" << e.y << "\" stroke=\"green\" stroke-width=\"2\" z-index=\"1\"\/>\n";
+			fout << "<line x1=\"" << s.x << "\" y1=\"" << s.y << "\"";
+			fout << "x2=\"" << e.x << "\" y2=\"" << e.y << "\" stroke=\"green\" stroke-width=\"2\" z-index=\"1\"\/>\n";
 
-        fout << "<circle cx=\"";
-        fout << s.x;
-        fout << "\" cy=\"";
-        fout << s.y;
-        if (i == 0)
-            fout << "\" r=\"4\" stroke=\"black\" fill=\"blue\" z-index=\"0\" />\n";
-        else
-            fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
-        fout << "<circle cx=\"";
-        fout << e.x;
-        fout << "\" cy=\"";
-        fout << e.y;
-        if (i == path.size() - 1)
-            fout << "\" r=\"4\" stroke=\"black\" fill=\"yellow\" z-index=\"0\" />\n";
-        else
-            fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
+			fout << "<circle cx=\"";
+			fout << s.x;
+			fout << "\" cy=\"";
+			fout << s.y;
+			if (i == 0)
+				fout << "\" r=\"4\" stroke=\"black\" fill=\"blue\" z-index=\"0\" />\n";
+			else
+				fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
+			fout << "<circle cx=\"";
+			fout << e.x;
+			fout << "\" cy=\"";
+			fout << e.y;
+			if (i == path.size() - 1)
+				fout << "\" r=\"4\" stroke=\"black\" fill=\"yellow\" z-index=\"0\" />\n";
+			else
+				fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
 
-    }
+		}
+	}
 
     fout << "\n</svg>";
     fout.close();
@@ -164,7 +177,7 @@ bool sorter(vector<Point> &p1, vector<Point> &p2)
 int main()
 {
     vector<Line> spotsl;
-	int dim = 10;
+	int dim = 4;
 
     for (int i = 0; i < dim*10; ++i)
     {
@@ -340,9 +353,9 @@ int main()
                 vec2 v2 = v + norm;
 
                 double phi = atan2(norm.y, norm.x);
-                phi += 3.141592/2.0;
-                double x = 5.0*cos(phi);
-                double y = 5.0*sin(phi);
+                phi += 3.141592/4.0;
+                double x = 10.0*cos(phi);
+                double y = 10.0*sin(phi);
                 vec2 adder(x,y);
                 v1 += adder;
                 v2 += adder;
@@ -374,7 +387,7 @@ int main()
                     node temp = nodes[n.edges[j]];
                     for (int k = temp.start; k < temp.end; ++k)
                     {
-                        if (glm::distance(v, newnodes[k].v) < 40.0)
+						if (glm::distance(v, newnodes[k].v) < 80.0 && temp.index != n.index)
                         newnodes[l].edges.push_back(k);
                     }
                 }
