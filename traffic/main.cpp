@@ -10,6 +10,8 @@ struct node
 	vec2 v;
 	vector<int> edges;
 	int index;
+    int start;
+    int end;
 	node();
 	node(vec2 tv, int tindex)
 	{
@@ -76,15 +78,16 @@ int makePath(vector<node> spots)
     vector<string> name;
 
     ofstream fout("out.html");
-    fout << "<svg width=\"2400\" height=\"2400\">\n";
+    fout << "<svg width=\"24000\" height=\"24000\">\n";
     
     vector<node> places;
 
     vector<Edge> edge_vector;
     vector<double> weight_array;
+    vec2 adder = vec2(100.0,100.0);
 	for (int i = 0; i < spots.size(); ++i)
 	{
-		vec2 st = spots[i].v;
+		vec2 st = spots[i].v+adder;
         fout << "<circle cx=\"";
         fout << st.x;
         fout << "\" cy=\"";
@@ -93,18 +96,15 @@ int makePath(vector<node> spots)
 		for (int j = 0; j < spots[i].edges.size(); ++j)
 		{
 			edge_vector.push_back(Edge(i,spots[i].edges[j]));
-			vec2 e = spots[spots[i].edges[j]].v;
+			vec2 e = spots[spots[i].edges[j]].v+adder;
 			weight_array.push_back(glm::distance(st,e));
-            vec2 s = spots[i].v;
-            fout << "<line x1=\"" << s.x << "\" y1=\"" << s.y << "\"";
+            vec2 s = spots[i].v+adder;
 
+            fout << "<line x1=\"" << s.x << "\" y1=\"" << s.y << "\"";
             fout << "x2=\"" << e.x << "\" y2=\"" << e.y << "\" stroke=\"black\" stroke-width=\"1\" z-index=\"1\"\/>\n";
 		}
 	}
     
-    fout << "\n</svg>";
-    fout.close();
-    /*
     graph_t g(edge_vector.begin(), edge_vector.end(), weight_array.begin(), name.size());
 
     property_map<graph_t, edge_weight_t>::type weightmap = get(edge_weight, g);
@@ -112,14 +112,47 @@ int makePath(vector<node> spots)
     vector<double> d(num_vertices(g));
     vertex_descriptor s = vertex(0, g);
 	
+    cout << "\nGenerating paths\n";
+
     dijkstra_shortest_paths(g, s,
                             predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
                             distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g))));
     
-    vertex_descriptor t = vertex(68, g);
-    vector<Edge> nodes = shortest_path(t,s,g,d,p);
-    outputPath(nodes,  g, name,  weightmap, "out");
-    */
+    cout << "\nGenerated. Outputting path\n";
+
+    vertex_descriptor t = vertex(5200, g);
+    vector<Edge> path = shortest_path(t,s,g,d,p);
+
+    for (int i = 0; i < path.size(); ++i)
+    {
+        vec2 s = spots[path[i].first].v+adder;
+        vec2 e = spots[path[i].second].v+adder;
+        
+        fout << "<line x1=\"" << s.x << "\" y1=\"" << s.y << "\"";
+        fout << "x2=\"" << e.x << "\" y2=\"" << e.y << "\" stroke=\"green\" stroke-width=\"2\" z-index=\"1\"\/>\n";
+
+        fout << "<circle cx=\"";
+        fout << s.x;
+        fout << "\" cy=\"";
+        fout << s.y;
+        if (i == 0)
+            fout << "\" r=\"4\" stroke=\"black\" fill=\"blue\" z-index=\"0\" />\n";
+        else
+            fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
+        fout << "<circle cx=\"";
+        fout << e.x;
+        fout << "\" cy=\"";
+        fout << e.y;
+        if (i == path.size() - 1)
+            fout << "\" r=\"4\" stroke=\"black\" fill=\"yellow\" z-index=\"0\" />\n";
+        else
+            fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
+
+    }
+
+    fout << "\n</svg>";
+    fout.close();
+    
     return 0;
 }
 
@@ -130,23 +163,22 @@ bool sorter(vector<Point> &p1, vector<Point> &p2)
 
 int main()
 {
-	int count = 0;
     vector<Line> spotsl;
 	int dim = 10;
 
     for (int i = 0; i < dim*10; ++i)
     {
         Line l;
-        l.push_back(Point(i*20, 0));
-        l.push_back(Point(i*20, dim * 200));
+        l.push_back(Point(i*200, 0));
+        l.push_back(Point(i*200, dim * 2000));
         spotsl.push_back(l);
     }
     vector<Line> spotsw;
     for (int i = 0; i < dim; ++i)
     {
         Line l;
-        l.push_back(Point(0, i*200));
-        l.push_back(Point(dim * 200, i * 200));
+        l.push_back(Point(0, i*2000));
+        l.push_back(Point(dim * 2000, i * 2000));
         spotsw.push_back(l);
     }
     vector<Line> roadsegs;
@@ -202,7 +234,6 @@ int main()
     }
     vector<pair<vec2,vec2>>  pts;
 	vector<node> nodes;
-    count = 0;
     for (int i = 0; i < roadsegs.size(); ++i)
     {
         if (roadsegs[i].size() > 0)
@@ -287,6 +318,69 @@ int main()
         node n(spots[i].first, i);
         n.edges = spots[i].second;
         nodes.push_back(n);
+    }
+
+    {
+        vector<node> newnodes;
+        
+	    int count = 0;
+        for (int i = 0; i < nodes.size(); ++i)
+        {
+            node n = nodes[i];
+            vec2 v = n.v;
+
+            vector<int> indexes;
+            nodes[i].start = count;
+            for (int j = 0; j < n.edges.size(); ++j)
+            {
+                node samp = nodes[n.edges[j]];
+                vec2 tv = samp.v;
+                vec2 norm = normalize(tv-v)*10.0f;
+                vec2 v1 = tv - norm;
+                vec2 v2 = v + norm;
+
+                double phi = atan2(norm.y, norm.x);
+                phi += 3.141592/2.0;
+                double x = 5.0*cos(phi);
+                double y = 5.0*sin(phi);
+                vec2 adder(x,y);
+                v1 += adder;
+                v2 += adder;
+                
+                {
+                    node temp(v1, i);
+                    temp.edges.push_back(count + 1);
+                    newnodes.push_back(temp);
+                }
+                {
+                    node temp(v2, i);
+                    temp.edges.push_back(count);
+                    newnodes.push_back(temp);
+
+                    indexes.push_back(count+1);
+                }
+                count += 2;
+            }
+            nodes[i].end = count;
+        }
+        for (int i = 0; i < nodes.size(); ++i)
+        {
+            node n = nodes[i];
+            for (int l = n.start; l < n.end; ++l)
+            {
+                vec2 v = newnodes[l].v;
+                for (int j = 0; j < n.edges.size(); ++j)
+                {
+                    node temp = nodes[n.edges[j]];
+                    for (int k = temp.start; k < temp.end; ++k)
+                    {
+                        if (glm::distance(v, newnodes[k].v) < 40.0)
+                        newnodes[l].edges.push_back(k);
+                    }
+                }
+            }
+        }
+        nodes = newnodes;
     }
 
 	makePath(nodes);
