@@ -126,41 +126,47 @@ int makePath(vector<node> spots)
     vector<vertex_descriptor> p(num_vertices(g));
     vector<double> d(num_vertices(g));
 	
-	for (int l = 0; l < 10; ++l)
-	{
-
-		vertex_descriptor s = vertex(rand()%num_vertices(g), g);
-		vertex_descriptor t = vertex(rand()%num_vertices(g), g);
+	time_t  timev;
 	
+	vertex_descriptor s = vertex((rand()+time(&timev))%num_vertices(g), g);
+	vertex_descriptor t = vertex((rand()+time(&timev)*3)%num_vertices(g), g);
+	for (int l = 0; l < 2; ++l)
+	{
 		vector<Edge> path = generate_path(g,s,t, p, d);
 
 
 		for (int i = 0; i < path.size(); ++i)
 		{
-			vec2 s = spots[path[i].first].v+adder;
-			vec2 e = spots[path[i].second].v+adder;
+			vec2 v1 = spots[path[i].first].v+adder;
+			vec2 v2 = spots[path[i].second].v+adder;
         
-			fout << "<line x1=\"" << s.x << "\" y1=\"" << s.y << "\"";
-			fout << "x2=\"" << e.x << "\" y2=\"" << e.y << "\" stroke=\"green\" stroke-width=\"2\" z-index=\"1\"\/>\n";
+			fout << "<line x1=\"" << v1.x << "\" y1=\"" << v1.y << "\"";
+			fout << "x2=\"" << v2.x << "\" y2=\"" << v2.y << "\" stroke=\"";
+			if (l%2 == 0)
+				fout << "green";
+			else
+				fout << "red";
+			fout << "\" stroke-width=\"3\" z-index=\"1\"\/>\n";
 
 			fout << "<circle cx=\"";
-			fout << s.x;
+			fout << v1.x;
 			fout << "\" cy=\"";
-			fout << s.y;
+			fout << v1.y;
 			if (i == 0)
 				fout << "\" r=\"4\" stroke=\"black\" fill=\"blue\" z-index=\"0\" />\n";
 			else
 				fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
 			fout << "<circle cx=\"";
-			fout << e.x;
+			fout << v2.x;
 			fout << "\" cy=\"";
-			fout << e.y;
+			fout << v2.y;
 			if (i == path.size() - 1)
 				fout << "\" r=\"4\" stroke=\"black\" fill=\"yellow\" z-index=\"0\" />\n";
 			else
 				fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
-
 		}
+		s = t;
+		t = vertex((rand()+time(&timev)*3)%num_vertices(g), g);
 	}
 
     fout << "\n</svg>";
@@ -387,6 +393,7 @@ int main()
                     node temp = nodes[n.edges[j]];
                     for (int k = temp.start; k < temp.end; ++k)
                     {
+						float dist = glm::distance(v, newnodes[k].v);
 						if (glm::distance(v, newnodes[k].v) < 80.0 && temp.index != n.index)
                         newnodes[l].edges.push_back(k);
                     }
