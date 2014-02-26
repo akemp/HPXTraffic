@@ -126,11 +126,11 @@ int makePath(vector<node> spots)
     vector<vertex_descriptor> p(num_vertices(g));
     vector<double> d(num_vertices(g));
 	
-    vertex_descriptor t = vertex(50, g);
 	for (int l = 0; l < 10; ++l)
 	{
 
 		vertex_descriptor s = vertex(rand()%num_vertices(g), g);
+		vertex_descriptor t = vertex(rand()%num_vertices(g), g);
 	
 		vector<Edge> path = generate_path(g,s,t, p, d);
 
@@ -353,7 +353,7 @@ int main()
                 vec2 v2 = v + norm;
 
                 double phi = atan2(norm.y, norm.x);
-                phi += 3.141592/4.0;
+                phi += 3.141592/2.0;
                 double x = 10.0*cos(phi);
                 double y = 10.0*sin(phi);
                 vec2 adder(x,y);
@@ -362,7 +362,7 @@ int main()
                 
                 {
                     node temp(v1, i);
-                    temp.edges.push_back(count + 1);
+                    //temp.edges.push_back(count + 1);
                     newnodes.push_back(temp);
                 }
                 {
