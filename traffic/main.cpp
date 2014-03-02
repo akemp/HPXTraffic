@@ -25,37 +25,6 @@ bool vec2s (vec2 i, vec2 j) {
     return (glm::distance(i,j) < 0.0001);
 }
 
-void outputPath(vector<Edge> nodes, graph_t g, vector<string> name,  property_map<graph_t, edge_weight_t>::type weightmap, string path)
-{
-  ofstream dot_file(path + ".dot");
-
-  dot_file << "digraph D {\n"
-    << "  rankdir=LR\n"
-    << "  size=\"25,25\"\n"
-    << "  ratio=\"fill\"\n"
-    << "  edge[style=\"bold\"]\n" << "  node[shape=\"circle\"]\n";
-  int indexer = 0;
-  graph_traits < graph_t >::edge_iterator ei, ei_end;
-  for (boost::tie(ei, ei_end) = edges(g); ei != ei_end; ++ei) {
-    graph_traits < graph_t >::edge_descriptor e = *ei;
-    graph_traits < graph_t >::vertex_descriptor
-      u = source(e, g), v = target(e, g);
-    dot_file << name[u] << " -> " << name[v]
-      << "[label=\"" << get(weightmap, e) << "\"";
-      bool contains = false;
-      if (indexer < nodes.size() &&  (nodes[indexer].first == u && nodes[indexer].second == v))
-      {
-        dot_file << ", color=\"black\"";
-        indexer++;
-      }
-    else
-      dot_file << ", color=\"grey\"";
-    dot_file << "]";
-  }
-  dot_file << "}";
-  return;
-}
-
 vector<Edge> shortest_path(vertex_descriptor target, vertex_descriptor s, graph_t g, const vector<double>& d, const vector<vertex_descriptor>& p)
 {
     
@@ -112,7 +81,8 @@ int makePath(vector<node> spots)
 		{
 			edge_vector.push_back(Edge(i,spots[i].edges[j]));
 			vec2 e = spots[spots[i].edges[j]].v+adder;
-			weight_array.push_back(glm::distance(st,e));
+			double dist = glm::distance(st,e);
+			weight_array.push_back(dist);
             vec2 s = spots[i].v+adder;
 
             fout << "<line x1=\"" << s.x << "\" y1=\"" << s.y << "\"";
@@ -126,47 +96,49 @@ int makePath(vector<node> spots)
     vector<vertex_descriptor> p(num_vertices(g));
     vector<double> d(num_vertices(g));
 	
+	{
 	time_t  timev;
 	
-	vertex_descriptor s = vertex((rand()+time(&timev))%num_vertices(g), g);
-	vertex_descriptor t = vertex((rand()+time(&timev)*3)%num_vertices(g), g);
-	for (int l = 0; l < 2; ++l)
-	{
-		vector<Edge> path = generate_path(g,s,t, p, d);
-
-
-		for (int i = 0; i < path.size(); ++i)
+		vertex_descriptor s = vertex((rand()+time(&timev))%num_vertices(g), g);
+		vertex_descriptor t = vertex((rand()+time(&timev)*3)%num_vertices(g), g);
+		for (int l = 0; l < 2; ++l)
 		{
-			vec2 v1 = spots[path[i].first].v+adder;
-			vec2 v2 = spots[path[i].second].v+adder;
-        
-			fout << "<line x1=\"" << v1.x << "\" y1=\"" << v1.y << "\"";
-			fout << "x2=\"" << v2.x << "\" y2=\"" << v2.y << "\" stroke=\"";
-			if (l%2 == 0)
-				fout << "green";
-			else
-				fout << "red";
-			fout << "\" stroke-width=\"3\" z-index=\"1\"\/>\n";
+			vector<Edge> path = generate_path(g,s,t, p, d);
 
-			fout << "<circle cx=\"";
-			fout << v1.x;
-			fout << "\" cy=\"";
-			fout << v1.y;
-			if (i == 0)
-				fout << "\" r=\"4\" stroke=\"black\" fill=\"blue\" z-index=\"0\" />\n";
-			else
-				fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
-			fout << "<circle cx=\"";
-			fout << v2.x;
-			fout << "\" cy=\"";
-			fout << v2.y;
-			if (i == path.size() - 1)
-				fout << "\" r=\"4\" stroke=\"black\" fill=\"yellow\" z-index=\"0\" />\n";
-			else
-				fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
+
+			for (int i = 0; i < path.size(); ++i)
+			{
+				vec2 v1 = spots[path[i].first].v+adder;
+				vec2 v2 = spots[path[i].second].v+adder;
+        
+				fout << "<line x1=\"" << v1.x << "\" y1=\"" << v1.y << "\"";
+				fout << "x2=\"" << v2.x << "\" y2=\"" << v2.y << "\" stroke=\"";
+				if (l%2 == 0)
+					fout << "green";
+				else
+					fout << "red";
+				fout << "\" stroke-width=\"6\" z-index=\"1\"\/>\n";
+
+				fout << "<circle cx=\"";
+				fout << v1.x;
+				fout << "\" cy=\"";
+				fout << v1.y;
+				if (i == 0)
+					fout << "\" r=\"4\" stroke=\"black\" fill=\"blue\" z-index=\"0\" />\n";
+				else
+					fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
+				fout << "<circle cx=\"";
+				fout << v2.x;
+				fout << "\" cy=\"";
+				fout << v2.y;
+				if (i == path.size() - 1)
+					fout << "\" r=\"4\" stroke=\"black\" fill=\"yellow\" z-index=\"0\" />\n";
+				else
+					fout << "\" r=\"3\" stroke=\"black\" fill=\"green\" z-index=\"0\" />\n";
+			}
+			s = t;
+			t = vertex((rand()+time(&timev)*10)%num_vertices(g), g);
 		}
-		s = t;
-		t = vertex((rand()+time(&timev)*3)%num_vertices(g), g);
 	}
 
     fout << "\n</svg>";
@@ -180,10 +152,9 @@ bool sorter(vector<Point> &p1, vector<Point> &p2)
     return (boost::geometry::distance(p1.front(), p1.back()) < boost::geometry::distance(p2.front(), p2.back()));
 }
 
-int main()
+vector<Line> generateRoads(int dim)
 {
     vector<Line> spotsl;
-	int dim = 4;
 
     for (int i = 0; i < dim*10; ++i)
     {
@@ -251,6 +222,17 @@ int main()
         }
         roadsegs.push_back(seg);
     }
+	return roadsegs;
+}
+/*
+vector<node> remove_duplicates(vector<node> nodes)
+{
+	vector<node> users;
+}
+*/
+int main()
+{
+	vector<Line> roadsegs = generateRoads(4);
     vector<pair<vec2,vec2>>  pts;
 	vector<node> nodes;
     for (int i = 0; i < roadsegs.size(); ++i)
