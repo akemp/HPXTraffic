@@ -39,6 +39,15 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
+
+
+using namespace boost; 
+using namespace glm;
+using namespace std;
+
+
+
+
 //This section of code and parts of its implementation are copied from http://www.richelbilderbeek.nl
 
 template <class T>
@@ -87,83 +96,92 @@ struct fuzzy_equal_to
   const double m_tolerance;
 };
 
+
 typedef boost::geometry::model::d2::point_xy<double> Point;
 typedef boost::geometry::model::linestring<Point> Line;
 
-//end section
+typedef adjacency_list < listS, vecS, directedS,
+no_property, property < edge_weight_t, double > > graph_t;
+typedef graph_traits < graph_t >::vertex_descriptor vertex_descriptor;
+typedef std::pair<int, int> Edge;
 
-#include <common/nanoflann.hpp>
-
-
-
-using namespace boost; 
-using namespace glm;
-using namespace nanoflann;
-using namespace std;
-
-
-
-
-#define WIDTH 1024
-#define HEIGHT 600
-
-
-
-struct PointCloud
+bool sorter(vector<Point> &p1, vector<Point> &p2)
 {
+    return (boost::geometry::distance(p1.front(), p1.back()) < boost::geometry::distance(p2.front(), p2.back()));
+}
 
-	std::vector<pair<vec2,vec2>>  pts;
-
-	// Must return the number of data points
-	inline size_t kdtree_get_point_count() const { return pts.size(); }
-
-	// Returns the distance between the vector "p1[0:size-1]" and the data point with index "idx_p2" stored in the class:
-	inline float kdtree_distance(const float *p1, const size_t idx_p2,size_t size) const
-	{
-        const double d0=p1[0]-pts[idx_p2].first[0];
-        const double d1=p1[1]-pts[idx_p2].first[1];
-		return d0*d0+d1*d1;
-	}
-
-	// Returns the dim'th component of the idx'th point in the class:
-	// Since this is inlined and the "dim" argument is typically an immediate value, the
-	//  "if/else's" are actually solved at compile time.
-	inline float kdtree_get_pt(const size_t idx, int dim) const
-	{
-        if (dim==0) return pts[idx].first[0];
-        else return pts[idx].first[1];
-	}
-
-	// Optional bounding-box computation: return false to default to a standard bbox computation loop.
-	//   Return true if the BBOX was already computed by the class and returned in "bb" so it can be avoided to redo it again.
-	//   Look at bb.size() to find out the expected dimensionality (e.g. 2 or 3 for point clouds)
-	template <class BBOX>
-	bool kdtree_get_bbox(BBOX &bb) const { return false; }
-
-};
-
-// construct a kd-tree index:
-typedef KDTreeSingleIndexAdaptor<
-	L2_Simple_Adaptor<float, PointCloud >,
-	PointCloud,
-	2 /* dim */
-	> kd_tree;
-
-
-struct Road
+vector<Line> generateRoads(int dim, float size)
 {
-    bool left, right, up, down;
-    int x,y;
-    Road(int i, int j)
+    vector<Line> spotsl;
+
+    for (int i = 0; i < dim*10; ++i)
     {
-        x = i;
-        y = j;
-        left = false;
-        right = false;
-        up = false;
-        down = false;
+        Line l;
+        l.push_back(Point(i*size, 0));
+        l.push_back(Point(i*size, dim * size * 10));
+        spotsl.push_back(l);
     }
-};
+    vector<Line> spotsw;
+    for (int i = 0; i < dim; ++i)
+    {
+        Line l;
+        l.push_back(Point(0, i * size * 10));
+        l.push_back(Point(dim * size * 10, i * size * 10));
+        spotsw.push_back(l);
+    }
+    vector<Line> roadsegs;
+
+    for (int i = 0; i < spotsl.size(); ++i)
+    {
+        Line line1 = spotsl[i];
+        Line seg;
+        vector<vector<Point>> pts;
+        for (int j = 0; j < spotsw.size(); ++j)
+        {
+            Line line2 = spotsw[j];
+            vector<Point> ints = GetLineLineIntersections(line1,line2);
+            if (ints.size() > 0)
+            {
+                vector<Point> temp;
+                temp.push_back(ints[0]);
+                temp.push_back(spotsl[i].front());
+                pts.push_back(temp);
+            }
+        }
+        sort(pts.begin(), pts.end(), sorter);
+        for (int j = 0; j < pts.size(); ++j)
+        {
+            seg.push_back(pts[j][0]);
+        }
+        roadsegs.push_back(seg);
+    }
+    
+    for (int i = 0; i < spotsw.size(); ++i)
+    {
+        Line line1 = spotsw[i];
+        Line seg;
+        vector<vector<Point>> pts;
+        for (int j = 0; j < spotsl.size(); ++j)
+        {
+            Line line2 = spotsl[j];
+            vector<Point> ints = GetLineLineIntersections(line1,line2);
+            if (ints.size() > 0)
+            {
+                vector<Point> temp;
+                temp.push_back(ints[0]);
+                temp.push_back(spotsw[i].front());
+                pts.push_back(temp);
+            }
+        }
+        sort(pts.begin(), pts.end(), sorter);
+        for (int j = 0; j < pts.size(); ++j)
+        {
+            seg.push_back(pts[j][0]);
+        }
+        roadsegs.push_back(seg);
+    }
+	return roadsegs;
+}
 
 
 struct Mesh2d
@@ -244,23 +262,17 @@ struct Mesh
     Mesh()
     {
     };
-    Mesh(vector<VertexData> vert, vector<unsigned int> ind, GLuint pID, GLuint Tex, GLuint RoadM = NULL)
+    Mesh(vector<VertexData> vert, vector<unsigned int> ind, GLuint pID, GLuint Tex)
     {
 
         move = vec3(0,0,0);
         rot = vec3(0,0,0);
-        postMove = vec3(0,0,0);
 
 
         programID = pID;
 	    // Get a handle for our "myTextureSampler" uniform
 	    TextureID  = glGetUniformLocation(programID, "tex");
         Texture = Tex;
-        if (RoadM != NULL)
-        {
-	        RoadID  = glGetUniformLocation(programID, "roadMap");
-        }
-        RoadMap = RoadM;
 
 
 	    // Get a handle for our "MVP" uniform
@@ -357,53 +369,7 @@ struct Mesh
 };
 
 
-
-GLuint createMap(vector<Road> roads, int width, int height){
-
-
-	// Some BMP files are misformatted, guess missing information
-	int imageSize=width*height*4; // : one byte for each Red, Green and Blue component
-
-	// Create a buffer
-	unsigned char* data = new unsigned char [imageSize];
-
-	// Read the actual data from the file into the buffer
-    for (int i = 0; i < imageSize; ++i)
-    {
-        data[i] = 100;
-    }
-
-
-	// Create one OpenGL texture
-	GLuint textureID;
-	glGenTextures(1, &textureID);
-	
-	// "Bind" the newly created texture : all future texture functions will modify this texture
-	glBindTexture(GL_TEXTURE_2D, textureID);
-
-	// Give the image to OpenGL
-	glTexImage2D(GL_TEXTURE_2D, 0,GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
-
-	// OpenGL has now copied the data. Free our own version
-	delete [] data;
-
-	// Poor filtering, or ...
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST); 
-
-	// ... nice trilinear filtering.
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR); 
-	glGenerateMipmap(GL_TEXTURE_2D);
-
-	// Return the ID of the texture we just created
-	return textureID;
-}
-
-
-int startup(int W = WIDTH, int H = HEIGHT, bool use2d = false)
+int startup(int W, int H, bool use2d = false)
 {
 	// Initialise GLFW
 	if( !glfwInit() )
@@ -435,7 +401,7 @@ int startup(int W = WIDTH, int H = HEIGHT, bool use2d = false)
 	if (!use2d)
 	{
 		glfwDisable( GLFW_MOUSE_CURSOR );
-		glfwSetMousePos(WIDTH/2, HEIGHT/2);
+		glfwSetMousePos(W/2, H/2);
 	}
 
 
@@ -467,7 +433,7 @@ int startup(int W = WIDTH, int H = HEIGHT, bool use2d = false)
 
     gluPerspective( 45.0f,                      //camera angle
 
-                (GLfloat)WIDTH/(GLfloat)HEIGHT, //The width to height ratio
+                (GLfloat)W/(GLfloat)H, //The width to height ratio
 
                  0.001f,                          //The near z clipping coordinate
 
@@ -493,143 +459,5 @@ double fps(int& nbFrames, double& totalTime, double& lastTime, double &last)
 	}
     return diff; 
 }
-
-
-void createRect(vector<VertexData>& vertex_data,vector<unsigned int>& indices, vec2 i, vec2 j, double height)
-{
-    int index = 0;
-    VertexData data;
-    data.texInd[0] = -1;
-    data.position[0] = i[0];
-    data.position[1] = height;
-    data.position[2] = j[0];
-    data.normal[0] = 0;
-    data.normal[1] = 1;
-    data.normal[2] = 0;
-    data.textureCoord[0] = 0;
-    data.textureCoord[1] = 0;
-    vertex_data.push_back(data);
-
-
-    data.position[0] = i[1];
-    data.position[1] = height;
-    data.position[2] = j[0];
-    data.normal[0] = 0;
-    data.normal[1] = 1;
-    data.normal[2] = 0;
-    data.textureCoord[0] = 1;
-    data.textureCoord[1] = 0;
-    vertex_data.push_back(data);
-
-
-    data.position[0] = i[0];
-    data.position[1] = height;
-    data.position[2] = j[1];
-    data.normal[0] = 0;
-    data.normal[1] = 1;
-    data.normal[2] = 0;
-    data.textureCoord[0] = 0;
-    data.textureCoord[1] = 1;
-    vertex_data.push_back(data);
-
-
-    data.position[0] = i[1];
-    data.position[1] = height;
-    data.position[2] = j[1];
-    data.normal[0] = 0;
-    data.normal[1] = 1;
-    data.normal[2] = 0;
-    data.textureCoord[0] = 1;
-    data.textureCoord[1] = 1;
-    vertex_data.push_back(data);
-
-
-    indices.push_back(index);
-    indices.push_back(index+2);
-    indices.push_back(index+1);
-
-    indices.push_back(index+3);
-    indices.push_back(index+1);
-    indices.push_back(index+2);
-
-}
-
-void createSquare(double i, double j, vector<VertexData>& vertex_data, vector<unsigned int>& indices, int &index,
-	vec4 height = vec4(0,0,0,0), double scale = 1, double texInd = -1)
-{
-    VertexData data;
-    data.texInd[0] = texInd;
-    data.position[0] = i;
-    data.position[1] = height[0];
-    data.position[2] = j;
-    data.normal[0] = 0;
-    data.normal[1] = 1;
-    data.normal[2] = 0;
-    data.textureCoord[0] = 0;
-    data.textureCoord[1] = 0;
-    vertex_data.push_back(data);
-
-
-    data.position[0] = i+scale;
-    data.position[1] = height[1];
-    data.position[2] = j;
-    data.normal[0] = 0;
-    data.normal[1] = 1;
-    data.normal[2] = 0;
-    data.textureCoord[0] = 1;
-    data.textureCoord[1] = 0;
-    vertex_data.push_back(data);
-
-
-    data.position[0] = i;
-    data.position[1] = height[2];
-    data.position[2] = j+scale;
-    data.normal[0] = 0;
-    data.normal[1] = 1;
-    data.normal[2] = 0;
-    data.textureCoord[0] = 0;
-    data.textureCoord[1] = 1;
-    vertex_data.push_back(data);
-
-
-    data.position[0] = i+scale;
-    data.position[1] = height[3];
-    data.position[2] = j+scale;
-    data.normal[0] = 0;
-    data.normal[1] = 1;
-    data.normal[2] = 0;
-    data.textureCoord[0] = 1;
-    data.textureCoord[1] = 1;
-    vertex_data.push_back(data);
-
-
-    indices.push_back(index);
-    indices.push_back(index+2);
-    indices.push_back(index+1);
-
-    indices.push_back(index+3);
-    indices.push_back(index+1);
-    indices.push_back(index+2);
-
-    index += 4;
-}
-
-void createTerrain(int maxx, int maxy, vector<VertexData>& vertex_data, vector<unsigned int>& indices, double scale = 1.0, double heights = 1.0)
-{
-    int index = 0;
-    
-	//CImg <unsigned char> image("heightmap.ppm"); 
-    //image.resize(maxx+1,maxy+1);
-    for (int i = 0; i < maxx; ++i)
-    {
-        for (int j = 0; j < maxy; ++j)
-        {
-            //vec4 height = vec4(image(i,j),image(i+1,j),image(i,j+1),image(i+1,j+1));
-             // height /= -heights;
-            createSquare(i*scale,j*scale,vertex_data,indices,index);//,height,scale);
-        }
-    }
-}
-
 
 #endif
