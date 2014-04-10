@@ -39,6 +39,9 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
+#include <SDL.h>
+#undef main
+
 
 
 using namespace boost; 

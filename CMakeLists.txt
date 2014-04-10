@@ -21,7 +21,9 @@ if(INCLUDE_DISTRIB)
 	add_subdirectory(distrib)
 endif(INCLUDE_DISTRIB)
 
+set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/external)
 
+include(FindSDL2 REQUIRED)
 
 include_directories(
 	external/AntTweakBar-1.16/include/
@@ -30,7 +32,8 @@ include_directories(
 	external/glew-1.9.0/include/
 	external/assimp-3.0.1270/include/
 	external/bullet-2.81-rev2613/src/
-	external/EasyBMP-1.06 
+	external/SDL2-2.0.3/include
+	${SDL2_INCLUDE_DIR}
 	.
 )
 
@@ -38,7 +41,9 @@ set(ALL_LIBS
 	${OPENGL_LIBRARY}
 	GLFW_276
 	GLEW_190
-	EASYBMP_106
+	assimp
+	${SDL2_LIBRARY_TEMP}
+	${SDL2MAIN_LIBRARY}
 )
 
 add_definitions(
@@ -86,8 +91,6 @@ add_executable(traffic
 
 target_link_libraries(traffic
 	${ALL_LIBS}
-	assimp
-	
 )
 
 create_target_launcher(traffic WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/traffic/")

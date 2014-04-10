@@ -11,6 +11,7 @@ add_definitions(
 	-D_CRT_SECURE_NO_WARNINGS
 )
 
+
 ### GLFW ###
 
 
@@ -152,25 +153,9 @@ target_link_libraries(GLEW_190
 	${OPENGL_LIBRARY}
 	${EXTRA_LIBS}
 )
-### EASYBMP ###
-
-set(EASYBMP_SOURCE
-	EasyBMP-1.06/EasyBMP.cpp
-)
-
-set(EASYBMP_HEADERS
-	EasyBMP-1.06/EasyBMP.h
-)
 
 
-add_library( EASYBMP_106 STATIC
-	${EASYBMP_SOURCE}
-	${EASYBMP_INCLUDE}
-)
 
-target_link_libraries(EASYBMP_106
-	${EXTRA_LIBS}
-)
 ### ASSIMP ###
 # AssImp already has a CMakeLists.txt so let's use these
 
