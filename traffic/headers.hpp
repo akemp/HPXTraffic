@@ -23,11 +23,10 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 
-#include <common/shader.hpp>
-#include <common/texture.hpp>
-#include <common/controls.hpp>
-#include <common/objloader.hpp>
 
+#include <boost/random/normal_distribution.hpp>
+#include <boost/random/variate_generator.hpp>
+#include <boost/random/mersenne_twister.hpp>
 
 
 #include <boost/graph/graph_traits.hpp>
@@ -39,16 +38,16 @@
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
 
-#include <SDL.h>
-#undef main
 
+#include <common/shader.hpp>
+#include <common/texture.hpp>
+#include <common/controls.hpp>
+#include <common/objloader.hpp>
 
 
 using namespace boost; 
 using namespace glm;
 using namespace std;
-
-
 
 
 //This section of code and parts of its implementation are copied from http://www.richelbilderbeek.nl
@@ -113,23 +112,29 @@ bool sorter(vector<Point> &p1, vector<Point> &p2)
     return (boost::geometry::distance(p1.front(), p1.back()) < boost::geometry::distance(p2.front(), p2.back()));
 }
 
-vector<Line> generateRoads(int dim, float size)
+vector<Line> generateRoads(int dim, int offset, float size)
 {
     vector<Line> spotsl;
-
-    for (int i = 0; i < dim*10; ++i)
+    for (int i = 0; i < dim*offset; ++i)
     {
+        /*
+        boost::random::mt19937 rng;         // produces randomness out of thin air
+                                        // see pseudo-random number generators
+    
+        boost::normal_distribution<double> noise(-1.0,1.0);
+        boost::variate_generator<boost::mt19937, 
+            boost::normal_distribution<double> > nD(rng, noise);*/
         Line l;
         l.push_back(Point(i*size, 0));
-        l.push_back(Point(i*size, dim * size * 10));
+        l.push_back(Point(i*size, dim * size * offset ));
         spotsl.push_back(l);
     }
     vector<Line> spotsw;
     for (int i = 0; i < dim; ++i)
     {
         Line l;
-        l.push_back(Point(0, i * size * 10));
-        l.push_back(Point(dim * size * 10, i * size * 10));
+        l.push_back(Point(0, i * size * offset));
+        l.push_back(Point(dim * size * offset, i * size * offset));
         spotsw.push_back(l);
     }
     vector<Line> roadsegs;
@@ -316,7 +321,7 @@ struct Mesh
 		// Compute the MVP matrix from keyboard and mouse input
 		glm::mat4 ProjectionMatrix = getProjectionMatrix();
 		glm::mat4 ViewMatrix = getViewMatrix();
-        glm::mat4 ModelMatrix = glm::translate(glm::mat4(1.0), move) * glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::translate(glm::mat4(1.0), postMove);
+        glm::mat4 ModelMatrix = glm::translate(glm::mat4(1.0), move) * glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0.0f, 0.0f, 1.0f));
 	    
         //mov += 0.01;
 		glm::mat4 MVP = ProjectionMatrix * ViewMatrix * ModelMatrix;
@@ -350,7 +355,7 @@ struct Mesh
     }
     glm::mat4 getModelMatrix()
     {
-        glm::mat4 ModelMatrix = glm::translate(glm::mat4(1.0), move) * glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0.0f, 0.0f, 1.0f)) * glm::translate(glm::mat4(1.0), postMove);
+        glm::mat4 ModelMatrix = glm::translate(glm::mat4(1.0), move) * glm::rotate(glm::mat4(1.0f), rot.x, glm::vec3(1.0f, 0.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.y, glm::vec3(0.0f, 1.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), rot.z, glm::vec3(0.0f, 0.0f, 1.0f));
 	    return ModelMatrix;
     }
     ~Mesh()
@@ -365,7 +370,7 @@ struct Mesh
     pair<vector<VertexData>,GLuint> vertices;
     pair<vector<unsigned int>,GLuint> indices;
     int num_indices;
-    vec3 move, rot, postMove;
+    vec3 move, rot;
     GLuint MatrixID, ModelMatrixID, ViewMatrixID, programID, TextureID, Texture;
     GLuint RoadID, RoadMap;
 

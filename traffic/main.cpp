@@ -1,5 +1,6 @@
 #include "headers.hpp"
 
+
 struct edger
 {
     pair<int,int> edge;
@@ -51,7 +52,7 @@ vector<Edge> shortest_path(vertex_descriptor target, vertex_descriptor s, graph_
 
 vector<Edge> generate_path(const graph_t &g, vertex_descriptor s, vertex_descriptor t, vector<vertex_descriptor> p, vector<double> d)
 {
-	
+
     cout << "\nGenerating paths\n";
 
     dijkstra_shortest_paths(g, s,
@@ -60,7 +61,7 @@ vector<Edge> generate_path(const graph_t &g, vertex_descriptor s, vertex_descrip
     
     cout << "\nGenerated. Outputting path\n";
 
-	
+
     return shortest_path(t,s,g,d,p);
 }
 
@@ -85,226 +86,161 @@ vector<Edge> generatePath(int start, int end,vector<edger> edges)
     vector<vertex_descriptor> p(num_vertices(g));
     vector<double> d(num_vertices(g));
 
-    time_t  timev;
-	
-	vertex_descriptor s = vertex(start%num_vertices(g), g);
-	vertex_descriptor t = vertex(end%num_vertices(g), g);
+    time_t timev;
 
-	return generate_path(g,s,t, p, d);
+vertex_descriptor s = vertex(start%num_vertices(g), g);
+vertex_descriptor t = vertex(end%num_vertices(g), g);
+
+return generate_path(g,s,t, p, d);
 }
 
-void outputEdges(vector<edger> edges, vector<vector<timestep>> paths)
+void foutRoads(const vector<vector<vec3>> &quads, const vector<pair<vec3,vector<vec3>>> &inputs, double diver)
 {
-
-    
-    ofstream fout("out.html");
-    fout << "<!DOCTYPE html> \n<html>\n<body>\n";
-    fout << "<canvas id=\"myCanvas\" width=\"4200\" height=\"3400\"></canvas>\n";
-    fout << "<script>\n";
-    fout << "window.requestAnimFrame = (function(callback) {\n";
-    fout << "return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || \
-        function(callback) { \n \
-          window.setTimeout(callback, 1000 / 60); \n \
-        }; \n \
-      })();";
-    fout << "var canvas = document.getElementById('myCanvas');\n";
-    fout << "var context = canvas.getContext('2d');\n";
-    fout << "var date = new Date()\n";
-    fout << "var start = date.getTime();\n";
-    
-    string roadstyle = "context.lineWidth = 1;\ncontext.strokeStyle = '#000000';\ncontext.stroke();\n";
-    string edgestyle = "context.lineWidth = 0.5;\ncontext.strokeStyle = '#00ff00';\ncontext.closePath();\ncontext.fillStyle = 'green';\ncontext.fill();\ncontext.stroke();\n";
-    string pathstyle = "context.lineWidth = 2;\ncontext.strokeStyle = '#ff0000';\ncontext.fillStyle = '#ff0000';\ncontext.stroke();\n";
-    
-    {
-        
-        vec2 adder = vec2(100.0,100.0);
-        fout << "\n\nvar paths = [\n";
-
-    
-        for (int l = 0; l < paths.size(); ++l)
-        {
-            vector<timestep> path = paths[l];
-            fout << "[\n";
-		    for (int i = 0; i < path.size(); ++i)
-		    {
-                {
-				    vec2 v1 = path[i].e+adder;
-                    
-                    fout << "[" << v1.x << ", " << v1.y << ", " << path[i].time;
-                 
-                    if (i < path.size() - 1)
-                        fout << "],\n";
-                    else
-                        fout << "]\n";   
-			    }
-                /*
-                {
-				    vec2 v1 = path[i].s+adder;
-				    vec2 v2 = path[i].e+adder;
-        
-                    fout << "[" << v1.x << ", " << v1.y << "],";
-                    fout << "[" << v2.x << ", " << v2.y;
-                    if (i < path.size() - 1)
-                        fout << "],\n";
-                    else
-                        fout << "]\n";
-			    }*/
-            }
-            if (l < paths.size() - 1)
-                fout << "],\n";
-            else
-                fout << "]\n";
-        }
-
-        fout << "];\n\n";
-    }
-
-    {
-        vec2 adder = vec2(100.0,100.0);
-
-        fout << "\nfunction drawcars(i,time){\n";
-
-        fout << "var difference = (time-start)/2000.0;\n";
-        fout << "if (Math.ceil(difference) < paths[i].length){\n";
-        
-        {
-            int count = 0;
-
-            fout << "var low = Math.floor(difference);\n";
-            fout << "var high = Math.ceil(difference);\n";
-            fout << "var diff = difference - low;\n";
-            fout << "var vl = paths[i][low];\n";
-            fout << "var vh = paths[i][high];\n";
-            fout << "var x = vl[0]*(1-diff)+vh[0]*diff;";
-            fout << "var y = vl[1]*(1-diff)+vh[1]*diff;";
-            
-            fout << "context.beginPath();\n";
-            fout << "context.arc(x, y, 10, 0, 2 * Math.PI, false);\n";
-            fout << "context.fill();";
-        }
-
-        fout << "}\n";
-        fout << "};\n";
-    }
-
-    // set line color
-    {
-        vec2 adder = vec2(100.0,100.0);
-        fout << "function drawroads(){\n";
-	    for (int i = 0; i < edges.size(); ++i)
-	    {
-		    {
-			    vec2 s = edges[i].v1;
-                vec2 e = edges[i].v2;
-			    double dist = glm::distance(s,e);
-
-                s += adder;
-                e += adder;
-                fout << "context.beginPath();\n";
-                fout << "context.moveTo(" << s.x << ", " << s.y << ");\n";
-                fout << "context.lineTo(" << e.x << ", " << e.y << ");\n";
-                fout << roadstyle;
-		    }
-        
-            for (int j = 0; j < edges[i].neighbors.size(); ++j)
-            {
-                vec2 s = edges[i].v2;
-                vec2 e = edges[edges[i].neighbors[j]].v1;
-			    double dist = glm::distance(s,e);
-            
-                s += adder;
-                e += adder;
-
-                fout << "context.beginPath();";
-                vec2 norm = e-s;
-                float phi = atan2(norm.y, norm.x);
-                vec2 v1 = s;
-                vec2 v2 = s;
-                phi += 3.141592f/2.0f;
-                float x = 2.0*cos(phi);
-                float y = 2.0*sin(phi);
-                vec2 addme(x,y);
-                v1 += addme;
-                v2 -= addme;
-            
-                fout << "context.moveTo(" << e.x << ", " << e.y << ");\n";
-                fout << "context.lineTo(" << v1.x << ", " << v1.y << ");\n";
-                fout << "context.lineTo(" << v2.x << ", " << v2.y << ");\n";
-
-                fout << edgestyle;
-            }
-        
-	    }
-    
-        fout << "};\n";
-    }
-    fout << "function animate() { \n \
-        var canvas = document.getElementById('myCanvas'); \n \
-        var context = canvas.getContext('2d'); \n \
-        context.clearRect(0, 0, canvas.width, canvas.height); \n \
-        //draw items \n \
-        drawroads(); \n \
-        var d = new Date(); \n \
-        for (var i = 0; i < paths.length; ++i) \n \
-        drawcars(i,d.getTime()); \n \
-        //call next frame \n \
-        requestAnimFrame(function() { \n \
-          animate(); \n \
-        }); \n \
-      } \n \
-      animate();";
-
-    fout << "\n</script>\n</body>\n</html>";
-    fout.close();
-}
-
-void outputStreets(vector<edger> edges)
-{
-    ofstream fout("out.obj");
-    
     int count = 1;
+    ofstream fout("out.obj");
+    for (int i = 0; i < quads.size(); ++i)
+    {
+        for (int j = 0; j < 4; ++j)
+            fout << "v " << quads[i][j][0]/diver << " " << quads[i][j][1]/diver << " " << quads[i][j][2]/diver << endl;
+        fout << "f " << count + 2 << " " << count + 3 << " " << count + 1 << " " << count << endl;
+        count += 4;
+    }
 
-    fout << "g g1\n";
-    
-	for (int i = 0; i < edges.size(); ++i)
-	{
-		{
-			vec2 s = edges[i].v1;
-            vec2 e = edges[i].v2;
-			double dist = glm::distance(s,e);
-
-            fout << "v " << s.x << " " << s.y << " 0\n";
-            fout << "v " << e.x << " " << e.y << " 0\n";
-
-            fout << "l " << count << " " << (count + 1) << endl;
-            count += 2;
-		}
-        
-        for (int j = 0; j < edges[i].neighbors.size(); ++j)
+    for (int i = 0; i < inputs.size(); ++i)
+    {   
+        for (int j = 0; j < inputs[i].second.size(); j += 2)
         {
-            vec2 s = edges[i].v2;
-            vec2 e = edges[edges[i].neighbors[j]].v1;
-			double dist = glm::distance(s,e);
-            
-            
-            fout << "v " << e.x << " " << e.y << " 0\n";
-            fout << "v " << s.x << " " << s.y << " 0\n";
-            
-            fout << "l " << count << " " << (count + 1) << endl;
-            count += 2;
+            fout << "v " << inputs[i].first[0]/diver << " " << inputs[i].first[1]/diver << " " << inputs[i].first[2]/diver << endl;
+            fout << "v " << inputs[i].second[j][0]/diver << " " << inputs[i].second[j][1]/diver << " " << inputs[i].second[j][2]/diver << endl;
+            fout << "v " << inputs[i].second[j+1][0]/diver << " " << inputs[i].second[j+1][1]/diver << " " << inputs[i].second[j+1][2]/diver << endl;
+            fout << "f " << count << " " << count + 1 << " " << count + 2 << endl;
+            count += 3;
         }
-        
-	}
-    
-
+    }
+    fout.close();
     return;
+}
+
+void generateQuads(vector<vector<vec3>> quads, vector<Edge> egs, vector<vec2> inputted, int& count, float scaler,
+                   vector<unsigned int>& indices, vector<VertexData>& vertex_data)
+{
+    
+    vector<pair<vec3, vector<vec3>>> inputs;
+
+    for (int i = 0; i < inputted.size(); ++i)
+    {
+        vec2 spot = inputted[i];
+        pair<vec3, vector<vec3>> temp;
+        temp.first = vec3(spot[0],0,spot[1]);
+        vector<vec3> places;
+        for (int j = 0; j < egs.size(); ++j)
+        {
+            if (glm::distance(spot, inputted[egs[j].first]) < 0.01)
+            {
+                vec2 p = inputted[egs[j].second];
+                places.push_back(vec3(p[0],0,p[1]));
+            }
+        }
+        temp.second = places;
+        inputs.push_back(temp);
+    }
+
+
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        vec3 cent = inputs[i].first;
+        vector<vec3> newinputs;
+        for (int j = 0; j < inputs[i].second.size(); ++j)
+        {
+            vec3 norm = normalize(inputs[i].second[j]-cent);
+            {
+                float phi = atan2(norm.z, norm.x);
+                phi += 3.141592f/2.0f;
+                float x = 20.0f*cos(phi);
+                float y = 20.0f*sin(phi);
+                vec2 adder(x,y);
+                newinputs.push_back(norm * 20.0f + cent + vec3(adder[0],0,adder[1]));
+            }
+            {
+                float phi = atan2(norm.z, norm.x);
+                phi -= 3.141592f/2.0f;
+                float x = 20.0f*cos(phi);
+                float y = 20.0f*sin(phi);
+                vec2 adder(x,y);
+                newinputs.push_back(norm * 20.0f + cent + vec3(adder[0],0,adder[1]));
+            }
+        }    
+        inputs[i].second = newinputs;    
+    }
+
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        vec3 pt = inputs[i].first*scaler;
+        VertexData temp;
+        temp.position[0] = pt[0];
+        temp.position[1] = pt[1];
+        temp.position[2] = pt[2];
+        temp.normal[0] = 0;
+        temp.normal[1] = 1;
+        temp.normal[2] = 0;
+        temp.texInd[0] = 0;
+        temp.textureCoord[0] = pt[0];
+        temp.textureCoord[1] = pt[2];
+        vertex_data.push_back(temp);
+        int current = count;
+        ++count;
+        for (int j = 0; j < inputs[i].second.size(); j += 2)
+        {
+            indices.push_back(current);
+            for (int k = 0; k < 2; ++k)
+            {
+                pt = inputs[i].second[j+k]*scaler;
+                temp.position[0] = pt[0];
+                temp.position[2] = pt[2];
+                temp.textureCoord[0] = pt[0];
+                temp.textureCoord[1] = pt[2];
+                vertex_data.push_back(temp);
+                indices.push_back(count);
+                ++count;
+            }
+        }
+    }
+
+    for (int i = 0; i < quads.size(); ++i)
+    {
+        VertexData temp;
+        temp.position[0] = 0;
+        temp.position[1] = 0;
+        temp.position[2] = 0;
+        temp.normal[0] = 0;
+        temp.normal[1] = 1;
+        temp.normal[2] = 0;
+        temp.texInd[0] = 0;
+        for (int j = 0; j < quads[i].size(); j ++)
+        {
+            vec3 pt = quads[i][j]*scaler;
+            temp.position[0] = pt[0];
+            temp.position[2] = pt[2];
+            temp.textureCoord[0] = pt[0];
+            temp.textureCoord[1] = pt[2];
+            vertex_data.push_back(temp);
+        }
+        indices.push_back(count+2);
+        indices.push_back(count+3);
+        indices.push_back(count+1);
+        indices.push_back(count+2);
+        indices.push_back(count);
+        indices.push_back(count+1);
+        count += 4;
+    }
+    return;
+
 }
 
 int main()
 {
-    float len = 80;
-	vector<Line> roadsegs = generateRoads(3, len);
+    float len = 300;
+	vector<Line> roadsegs = generateRoads(5,4, len);
     
     vector<pair<int,int>> egs;
     vector<vec2> inputted;
@@ -357,8 +293,13 @@ int main()
             }
         }
     }
+    
     vector<edger> edges;
+    
 
+    vector<vector<vec3>> quads;
+
+    
     for (int i = 0; i < egs.size(); ++i)
     {
         int ind = egs[i].second;
@@ -372,69 +313,148 @@ int main()
                 e.neighbors.push_back(j);
             }
         }
+
         vec2 v1 = inputted[e.edge.first];
         vec2 v2 = inputted[e.edge.second];
+        
+        vec2 ov1 = v1;
+        vec2 ov2 = v2;
+        
+
         vec2 norm = normalize(v2-v1);
+        
 
         v1 += norm * 10.0f;
         v2 -= norm * 10.0f;
+
 
         float phi = atan2(norm.y, norm.x);
         phi += 3.141592/2.0;
         float x = 10.0*cos(phi);
         float y = 10.0*sin(phi);
         vec2 adder(x,y);
+        
+        vec2 nv1 = ov1;
+        vec2 nv2 = ov2;
+
         v1 += adder;
         v2 += adder;
 
         e.v1 = v1;
         e.v2 = v2;
+        {
+            ov1 += adder*2.0f;
+            ov2 += adder*2.0f;
+
+            ov1 += norm * 20.0f;
+            ov2 -= norm * 20.0f;
+            
+            nv1 += norm * 20.0f;
+            nv2 -= norm * 20.0f;
+            
+            vector<vec3> quad;
+            quad.push_back(vec3(nv1[0],0, nv1[1]));
+            quad.push_back(vec3(nv2[0],0, nv2[1]));
+            quad.push_back(vec3(ov1[0],0, ov1[1]));
+            quad.push_back(vec3(ov2[0],0, ov2[1]));
+            quads.push_back(quad);
+        }
 
         edges.push_back(e);
     }
+
     
-    vector<vector<Edge>> paths;
-
-    vector<vector<timestep>> steps;
-    if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
+    int count = 0;
+    
+    vector<unsigned int> indices;
+    vector<VertexData> vertex_data;
+    
+    
+    float scaler = 0.0225;
+    generateQuads(quads, egs, inputted, count, scaler, indices, vertex_data);
+    
+    vector<pair<vector<Edge>,float>> paths;
+    
+    for (int i = 0; i < 3; ++i)
     {
-        std::cout << SDL_GetError() << std::endl;
-        return 1;
+        paths.push_back(pair<vector<Edge>,float>(generatePath(0,i*10,edges),i));
     }
-    SDL_Quit();
-    /*
-    for (int i = 0; i < 50; ++i)
+
+
+    int code = startup(1200,600);
+
+
+    if (code != 0)
+        return code;
+    
+    int width = 64, height = width;
+    GLuint VertexArrayID;
+    glGenVertexArrays(1, &VertexArrayID);
+    glBindVertexArray(VertexArrayID);
+
+
+    Mesh terrain(vertex_data,indices, LoadShaders( "vert.glsl", "frag.glsl" ), loadDDS("asphalt.dds"));
+    terrain.move.y = -3.0;
+
+    Assimp::Importer importer;
+    const aiScene* scene = importer.ReadFile("car.obj", aiProcess_FlipUVs);
+    
+    indices = vector<unsigned int>();
+    vertex_data = vector<VertexData>();
+    
+    loadAssImp(scene->mMeshes[0],indices, vertex_data, 0.008);
+    
+    Mesh car(vertex_data,indices, LoadShaders( "vert.glsl", "frag.glsl" ), loadDDS("delorean.dds"));
+    
+    car.move.y = -3.0;
+    vector<Mesh> cars;
+    for (int i = 0; i < 3; ++i)
     {
-        paths.push_back(generatePath(0,i*5000,edges));
-        vector<timestep> step;
-        vector<vec2> holders;
-        for (int j = 0; j < paths[i].size(); ++j)
-        {
-            if (paths[i][j].first != paths[i][j].second)
+        cars.push_back(car);
+    }
+
+    double lastTime = glfwGetTime();
+    int nbFrames = 0;
+    double last = glfwGetTime();
+    double totalTime = 0;
+    	do{	
+            double elapsed = fps(nbFrames, totalTime, lastTime, last);
+            glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+            computeMatricesFromInputs();
+
+            terrain.draw();
+            for (int i = 0; i < cars.size(); ++i)
             {
-                holders.push_back(edges[paths[i][j].first].v1);
-                holders.push_back(edges[paths[i][j].first].v2);
-                holders.push_back(edges[paths[i][j].second].v1);
-            }
-        }
-        if (holders.size() > 0)
-        {
-            step.push_back(timestep(holders[0], 0));
-            for (int j = 0; j < holders.size(); ++j)
-            {
-                float dist = glm::distance(step.back().e,holders[j]);
-                if (dist > 0.001f)
+                int indl = paths[i].first.front().first;
+                vec2 vl = edges[indl].v1*scaler;
+                vec2 vh = edges[indl].v2*scaler;
+                float dist = glm::max<float>(glm::distance(vh,vl),0.00001);
+                while (paths[i].second > dist && paths[i].first.size() > 1)
                 {
-                    step.push_back(timestep(holders[j], dist));
+                    paths[i].second -= dist;
+                    paths[i].first.erase(paths[i].first.begin());
+                    indl = paths[i].first.front().first;
+                    vl = edges[indl].v1*scaler;
+                    vh = edges[indl].v2*scaler;
+                    dist = glm::max<float>(glm::distance(vh,vl),0.00001);
                 }
+                float mov = paths[i].second/dist;
+                if (paths[i].first.size() == 1 && mov > 1.0f)
+                    mov = 1.0f;
+                vec2 v = vl*(1.0f-mov)+vh*mov;
+                cars[i].move.x = v.x;
+                cars[i].move.z = v.y;
+                cars[i].draw();
+                paths[i].second += elapsed/100.0f;
             }
-        }
-        steps.push_back(step);
-    }*/
+            
 
-    //outputStreets(edges);
+            glfwSwapBuffers();
 
-    //outputEdges(edges,steps);
+        } while( glfwGetKey( GLFW_KEY_ESC ) != GLFW_PRESS &&
+                    glfwGetWindowParam( GLFW_OPENED ) );
+
+        	glfwTerminate();
 
     return 0;
 }

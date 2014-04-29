@@ -73,3 +73,278 @@ std::string fts (float number){
     buff<<number;
     return buff.str();   
 }*/
+
+SDL CODE
+
+
+    {
+        if (SDL_Init(SDL_INIT_EVERYTHING) == -1)
+        {
+            std::cout << SDL_GetError() << std::endl;
+            return 1;
+        }
+        SDL_Window *win = SDL_CreateWindow("Hello World!", 100, 100, 640, 480,
+	    SDL_WINDOW_SHOWN);
+        if (win == nullptr){
+	        std::cout << "SDL_CreateWindow Error: " << SDL_GetError() << std::endl;
+	        return 1;
+        }
+
+        SDL_Renderer *ren = SDL_CreateRenderer(win, -1, 
+        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+        if (ren == nullptr){
+	        std::cout << "SDL_CreateRenderer Error: " << SDL_GetError() << std::endl;
+	        return 1;
+        }
+
+        SDL_Surface *bmp = SDL_LoadBMP("../traffic/car.bmp");
+        if (bmp == nullptr){
+	        std::cout << "SDL_LoadBMP Error: " << SDL_GetError() << std::endl;
+	        return 1;
+        }
+
+        SDL_Texture *tex = SDL_CreateTextureFromSurface(ren, bmp);
+        SDL_FreeSurface(bmp);
+        if (tex == nullptr){
+	        std::cout << "SDL_CreateTextureFromSurface Error: "
+		        << SDL_GetError() << std::endl;
+	        return 1;
+        }   
+        SDL_Event sdlevent;
+        bool gameRunning = true;
+        
+        while (gameRunning)
+        {
+            SDL_RenderClear(ren);
+            
+            if (SDL_PollEvent(&sdlevent))
+            {
+                if (sdlevent.type == SDL_QUIT)
+                {
+                    gameRunning = false;
+                }
+            }
+
+            SDL_SetRenderDrawColor(ren, 255, 0, 0, 255);
+
+            SDL_RenderCopy(ren, tex, NULL, NULL);
+
+            SDL_RenderDrawLine(ren,0,0,10,100);
+
+            SDL_RenderPresent(ren);
+        }
+        SDL_DestroyTexture(tex);
+        SDL_DestroyRenderer(ren);
+        SDL_DestroyWindow(win);
+
+        SDL_Quit();
+    }
+
+
+void outputEdges(vector<edger> edges, vector<vector<timestep>> paths)
+{
+
+    
+    ofstream fout("out.html");
+    fout << "<!DOCTYPE html> \n<html>\n<body>\n";
+    fout << "<canvas id=\"myCanvas\" width=\"4200\" height=\"3400\"></canvas>\n";
+    fout << "<script>\n";
+    fout << "window.requestAnimFrame = (function(callback) {\n";
+    fout << "return window.requestAnimationFrame || window.webkitRequestAnimationFrame || window.mozRequestAnimationFrame || window.oRequestAnimationFrame || window.msRequestAnimationFrame || \
+        function(callback) { \n \
+          window.setTimeout(callback, 1000 / 60); \n \
+        }; \n \
+      })();";
+    fout << "var canvas = document.getElementById('myCanvas');\n";
+    fout << "var context = canvas.getContext('2d');\n";
+    fout << "var date = new Date()\n";
+    fout << "var start = date.getTime();\n";
+    
+    string roadstyle = "context.lineWidth = 1;\ncontext.strokeStyle = '#000000';\ncontext.stroke();\n";
+    string edgestyle = "context.lineWidth = 0.5;\ncontext.strokeStyle = '#00ff00';\ncontext.closePath();\ncontext.fillStyle = 'green';\ncontext.fill();\ncontext.stroke();\n";
+    string pathstyle = "context.lineWidth = 2;\ncontext.strokeStyle = '#ff0000';\ncontext.fillStyle = '#ff0000';\ncontext.stroke();\n";
+    
+    {
+        
+        vec2 adder = vec2(100.0,100.0);
+        fout << "\n\nvar paths = [\n";
+
+    
+        for (int l = 0; l < paths.size(); ++l)
+        {
+            vector<timestep> path = paths[l];
+            fout << "[\n";
+		    for (int i = 0; i < path.size(); ++i)
+		    {
+                {
+				    vec2 v1 = path[i].e+adder;
+                    
+                    fout << "[" << v1.x << ", " << v1.y << ", " << path[i].time;
+                 
+                    if (i < path.size() - 1)
+                        fout << "],\n";
+                    else
+                        fout << "]\n";   
+			    }
+                /*
+                {
+				    vec2 v1 = path[i].s+adder;
+				    vec2 v2 = path[i].e+adder;
+        
+                    fout << "[" << v1.x << ", " << v1.y << "],";
+                    fout << "[" << v2.x << ", " << v2.y;
+                    if (i < path.size() - 1)
+                        fout << "],\n";
+                    else
+                        fout << "]\n";
+			    }*/
+            }
+            if (l < paths.size() - 1)
+                fout << "],\n";
+            else
+                fout << "]\n";
+        }
+
+        fout << "];\n\n";
+    }
+
+    {
+        vec2 adder = vec2(100.0,100.0);
+
+        fout << "\nfunction drawcars(i,time){\n";
+
+        fout << "var difference = (time-start)/2000.0;\n";
+        fout << "if (Math.ceil(difference) < paths[i].length){\n";
+        
+        {
+            int count = 0;
+
+            fout << "var low = Math.floor(difference);\n";
+            fout << "var high = Math.ceil(difference);\n";
+            fout << "var diff = difference - low;\n";
+            fout << "var vl = paths[i][low];\n";
+            fout << "var vh = paths[i][high];\n";
+            fout << "var x = vl[0]*(1-diff)+vh[0]*diff;";
+            fout << "var y = vl[1]*(1-diff)+vh[1]*diff;";
+            
+            fout << "context.beginPath();\n";
+            fout << "context.arc(x, y, 10, 0, 2 * Math.PI, false);\n";
+            fout << "context.fill();";
+        }
+
+        fout << "}\n";
+        fout << "};\n";
+    }
+
+    // set line color
+    {
+        vec2 adder = vec2(100.0,100.0);
+        fout << "function drawroads(){\n";
+	    for (int i = 0; i < edges.size(); ++i)
+	    {
+		    {
+			    vec2 s = edges[i].v1;
+                vec2 e = edges[i].v2;
+			    double dist = glm::distance(s,e);
+
+                s += adder;
+                e += adder;
+                fout << "context.beginPath();\n";
+                fout << "context.moveTo(" << s.x << ", " << s.y << ");\n";
+                fout << "context.lineTo(" << e.x << ", " << e.y << ");\n";
+                fout << roadstyle;
+		    }
+        
+            for (int j = 0; j < edges[i].neighbors.size(); ++j)
+            {
+                vec2 s = edges[i].v2;
+                vec2 e = edges[edges[i].neighbors[j]].v1;
+			    double dist = glm::distance(s,e);
+            
+                s += adder;
+                e += adder;
+
+                fout << "context.beginPath();";
+                vec2 norm = e-s;
+                float phi = atan2(norm.y, norm.x);
+                vec2 v1 = s;
+                vec2 v2 = s;
+                phi += 3.141592f/2.0f;
+                float x = 2.0*cos(phi);
+                float y = 2.0*sin(phi);
+                vec2 addme(x,y);
+                v1 += addme;
+                v2 -= addme;
+            
+                fout << "context.moveTo(" << e.x << ", " << e.y << ");\n";
+                fout << "context.lineTo(" << v1.x << ", " << v1.y << ");\n";
+                fout << "context.lineTo(" << v2.x << ", " << v2.y << ");\n";
+
+                fout << edgestyle;
+            }
+        
+	    }
+    
+        fout << "};\n";
+    }
+    fout << "function animate() { \n \
+        var canvas = document.getElementById('myCanvas'); \n \
+        var context = canvas.getContext('2d'); \n \
+        context.clearRect(0, 0, canvas.width, canvas.height); \n \
+        //draw items \n \
+        drawroads(); \n \
+        var d = new Date(); \n \
+        for (var i = 0; i < paths.length; ++i) \n \
+        drawcars(i,d.getTime()); \n \
+        //call next frame \n \
+        requestAnimFrame(function() { \n \
+          animate(); \n \
+        }); \n \
+      } \n \
+      animate();";
+
+    fout << "\n</script>\n</body>\n</html>";
+    fout.close();
+}
+
+void outputStreets(vector<edger> edges)
+{
+    ofstream fout("out.obj");
+    
+    int count = 1;
+
+    fout << "g g1\n";
+    
+	for (int i = 0; i < edges.size(); ++i)
+	{
+		{
+			vec2 s = edges[i].v1;
+            vec2 e = edges[i].v2;
+			double dist = glm::distance(s,e);
+
+            fout << "v " << s.x << " " << s.y << " 0\n";
+            fout << "v " << e.x << " " << e.y << " 0\n";
+
+            fout << "l " << count << " " << (count + 1) << endl;
+            count += 2;
+		}
+        
+        for (int j = 0; j < edges[i].neighbors.size(); ++j)
+        {
+            vec2 s = edges[i].v2;
+            vec2 e = edges[edges[i].neighbors[j]].v1;
+			double dist = glm::distance(s,e);
+            
+            
+            fout << "v " << e.x << " " << e.y << " 0\n";
+            fout << "v " << s.x << " " << s.y << " 0\n";
+            
+            fout << "l " << count << " " << (count + 1) << endl;
+            count += 2;
+        }
+        
+	}
+    
+
+    return;
+}
