@@ -348,3 +348,32 @@ void outputStreets(vector<edger> edges)
 
     return;
 }
+
+// output roads
+
+void foutRoads(const vector<vector<vec3>> &quads, const vector<pair<vec3,vector<vec3>>> &inputs, double diver)
+{
+    int count = 1;
+    ofstream fout("out.obj");
+    for (int i = 0; i < quads.size(); ++i)
+    {
+        for (int j = 0; j < 4; ++j)
+            fout << "v " << quads[i][j][0]/diver << " " << quads[i][j][1]/diver << " " << quads[i][j][2]/diver << endl;
+        fout << "f " << count + 2 << " " << count + 3 << " " << count + 1 << " " << count << endl;
+        count += 4;
+    }
+
+    for (int i = 0; i < inputs.size(); ++i)
+    {   
+        for (int j = 0; j < inputs[i].second.size(); j += 2)
+        {
+            fout << "v " << inputs[i].first[0]/diver << " " << inputs[i].first[1]/diver << " " << inputs[i].first[2]/diver << endl;
+            fout << "v " << inputs[i].second[j][0]/diver << " " << inputs[i].second[j][1]/diver << " " << inputs[i].second[j][2]/diver << endl;
+            fout << "v " << inputs[i].second[j+1][0]/diver << " " << inputs[i].second[j+1][1]/diver << " " << inputs[i].second[j+1][2]/diver << endl;
+            fout << "f " << count << " " << count + 1 << " " << count + 2 << endl;
+            count += 3;
+        }
+    }
+    fout.close();
+    return;
+}

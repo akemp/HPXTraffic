@@ -64,12 +64,9 @@ add_definitions(
 set (sources 
 	traffic/main.cpp
 	traffic/headers.hpp
-	traffic/vehicles.hpp
+	traffic/graphics.hpp
 	traffic/vert.glsl
 	traffic/frag.glsl
-	traffic/fragTerra.glsl
-	traffic/vert2d.glsl
-	traffic/frag2d.glsl
 	common/controls.cpp
 	common/controls.hpp
 	common/nanoflann.hpp
