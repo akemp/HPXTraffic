@@ -3,6 +3,8 @@
 
 //#include <hpx/hpx_init.hpp>
 
+#include <traffic/graphics.hpp>
+
 // Include standard headers
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,18 +13,6 @@
 #include <iomanip>
 #include <queue>
 #include <fstream>
-
-
-// Include GLEW
-#include <GL/glew.h>
-
-// Include GLFW
-#include <GL/glfw.h>
-
-// Include GLM
-#include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-
 
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/variate_generator.hpp>
@@ -37,12 +27,6 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
-
-
-#include <common/shader.hpp>
-#include <common/texture.hpp>
-#include <common/controls.hpp>
-#include <common/objloader.hpp>
 
 
 
@@ -121,7 +105,123 @@ typedef graph_traits < graph_t >::vertex_descriptor vertex_descriptor;
 typedef std::pair<int, int> Edge;
 
 
-#include <traffic/graphics.hpp>
+
+void generateQuads(vector<vector<vec3>> quads, vector<Edge> egs, vector<vec2> inputted, int& count, float scaler,
+                   vector<unsigned int>& indices, vector<VertexData>& vertex_data)
+{
+    
+    vector<pair<vec3, vector<vec3>>> inputs;
+
+    for (int i = 0; i < inputted.size(); ++i)
+    {
+        vec2 spot = inputted[i];
+        pair<vec3, vector<vec3>> temp;
+        temp.first = vec3(spot[0],0,spot[1]);
+        vector<vec3> places;
+        for (int j = 0; j < egs.size(); ++j)
+        {
+            if (glm::distance(spot, inputted[egs[j].first]) < 0.01)
+            {
+                vec2 p = inputted[egs[j].second];
+                places.push_back(vec3(p[0],0,p[1]));
+            }
+        }
+        temp.second = places;
+        inputs.push_back(temp);
+    }
+
+
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        vec3 cent = inputs[i].first;
+        vector<vec3> newinputs;
+        for (int j = 0; j < inputs[i].second.size(); ++j)
+        {
+            vec3 norm = normalize(inputs[i].second[j]-cent);
+            {
+                float phi = atan2(norm.z, norm.x);
+                phi += 3.141592f/2.0f;
+                float x = 20.0f*cos(phi);
+                float y = 20.0f*sin(phi);
+                vec2 adder(x,y);
+                newinputs.push_back(norm * 20.0f + cent + vec3(adder[0],0,adder[1]));
+            }
+            {
+                float phi = atan2(norm.z, norm.x);
+                phi -= 3.141592f/2.0f;
+                float x = 20.0f*cos(phi);
+                float y = 20.0f*sin(phi);
+                vec2 adder(x,y);
+                newinputs.push_back(norm * 20.0f + cent + vec3(adder[0],0,adder[1]));
+            }
+        }    
+        inputs[i].second = newinputs;    
+    }
+
+    for (int i = 0; i < inputs.size(); ++i)
+    {
+        vec3 pt = inputs[i].first*scaler;
+        VertexData temp;
+        temp.position[0] = pt[0];
+        temp.position[1] = pt[1];
+        temp.position[2] = pt[2];
+        temp.normal[0] = 0;
+        temp.normal[1] = 1;
+        temp.normal[2] = 0;
+        temp.texInd[0] = 0;
+        temp.textureCoord[0] = pt[0];
+        temp.textureCoord[1] = pt[2];
+        vertex_data.push_back(temp);
+        int current = count;
+        ++count;
+        for (int j = 0; j < inputs[i].second.size(); j += 2)
+        {
+            indices.push_back(current);
+            for (int k = 0; k < 2; ++k)
+            {
+                pt = inputs[i].second[j+k]*scaler;
+                temp.position[0] = pt[0];
+                temp.position[2] = pt[2];
+                temp.textureCoord[0] = pt[0];
+                temp.textureCoord[1] = pt[2];
+                vertex_data.push_back(temp);
+                indices.push_back(count);
+                ++count;
+            }
+        }
+    }
+
+    for (int i = 0; i < quads.size(); ++i)
+    {
+        VertexData temp;
+        temp.position[0] = 0;
+        temp.position[1] = 0;
+        temp.position[2] = 0;
+        temp.normal[0] = 0;
+        temp.normal[1] = 1;
+        temp.normal[2] = 0;
+        temp.texInd[0] = 0;
+        for (int j = 0; j < quads[i].size(); j ++)
+        {
+            vec3 pt = quads[i][j]*scaler;
+            temp.position[0] = pt[0];
+            temp.position[2] = pt[2];
+            temp.textureCoord[0] = pt[0];
+            temp.textureCoord[1] = pt[2];
+            vertex_data.push_back(temp);
+        }
+        indices.push_back(count+2);
+        indices.push_back(count+3);
+        indices.push_back(count+1);
+        indices.push_back(count+2);
+        indices.push_back(count);
+        indices.push_back(count+1);
+        count += 4;
+    }
+    return;
+
+}
+
 
 
 //This section of code and parts of its implementation are copied from http://www.richelbilderbeek.nl
@@ -236,14 +336,13 @@ vector<Edge> shortest_path(vertex_descriptor target, vertex_descriptor s, graph_
 vector<Edge> generate_path(const graph_t &g, vertex_descriptor s, vertex_descriptor t, vector<vertex_descriptor> p, vector<double> d)
 {
 
-    cout << "\nGenerating paths\n";
+    //cout << "\nGenerating paths\n";
 
     dijkstra_shortest_paths(g, s,
                             predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
                             distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g))));
     
-    cout << "\nGenerated. Outputting path\n";
-
+    //cout << "\nGenerated. Outputting path\n";
 
     return shortest_path(t,s,g,d,p);
 }

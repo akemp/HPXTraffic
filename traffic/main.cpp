@@ -2,84 +2,121 @@
 
 struct vehicle
 {
-    vector<vec2> path;
-    float current;
-    float progress;
-    float total;
-    float maximum;
+    int destination;
     int index;
-};
+    vec2 start;
+    vec2 dir;
 
-void processCars(vector<Mesh>& cars, vector<vector<Edge>>& paths, vector<vehicle>& pathers,
+    vec2 vel;
+
+    float progress;
+    float dist;
+};
+ 
+// Given three colinear points p, q, r, the function checks if
+// point q lies on line segment 'pr'
+bool onSegment(vec2 p, vec2 q, vec2 r)
+{
+    if (q.x <= glm::max(p.x, r.x) && q.x >= glm::min(p.x, r.x) &&
+        q.y <= glm::max(p.y, r.y) && q.y >= glm::min(p.y, r.y))
+       return true;
+ 
+    return false;
+}
+ 
+// To find orientation of ordered triplet (p, q, r).
+// The function returns following values
+// 0 --> p, q and r are colinear
+// 1 --> Clockwise
+// 2 --> Counterclockwise
+int orientation(vec2 p, vec2 q, vec2 r)
+{
+    // See 10th slides from following link for derivation of the formula
+    // http://www.dcs.gla.ac.uk/~pat/52233/slides/Geometry1x1.pdf
+    float val = (q.y - p.y) * (r.x - q.x) -
+              (q.x - p.x) * (r.y - q.y);
+ 
+    if (val == 0) return 0;  // colinear
+ 
+    return (val > 0)? 1: 2; // clock or counterclock wise
+}
+ 
+// The main function that returns true if line segment 'p1q1'
+// and 'p2q2' intersect.
+bool doIntersect(vec2 p1, vec2 q1, vec2 p2, vec2 q2)
+{
+    // Find the four orientations needed for general and
+    // special cases
+    int o1 = orientation(p1, q1, p2);
+    int o2 = orientation(p1, q1, q2);
+    int o3 = orientation(p2, q2, p1);
+    int o4 = orientation(p2, q2, q1);
+ 
+    // General case
+    if (o1 != o2 && o3 != o4)
+        return true;
+ 
+    // Special Cases
+    // p1, q1 and p2 are colinear and p2 lies on segment p1q1
+    if (o1 == 0 && onSegment(p1, p2, q1)) return true;
+ 
+    // p1, q1 and p2 are colinear and q2 lies on segment p1q1
+    if (o2 == 0 && onSegment(p1, q2, q1)) return true;
+ 
+    // p2, q2 and p1 are colinear and p1 lies on segment p2q2
+    if (o3 == 0 && onSegment(p2, p1, q2)) return true;
+ 
+     // p2, q2 and q1 are colinear and q1 lies on segment p2q2
+    if (o4 == 0 && onSegment(p2, q1, q2)) return true;
+ 
+    return false; // Doesn't fall in any of the above cases
+}
+
+void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
     const vector<edger>& edges, const float scaler, const float elapsed)
 {
+    vector<vec2> places;
+    vector<vec2> vels;
     for (int i = 0; i < pathers.size(); ++i)
     {
-        {
-            float mov = (pathers[i].progress + 0.2)/pathers[i].current;
-            int ind = pathers[i].index;
-            vec2 v;
-            float cur = pathers[i].current;
-            float lastcur = cur;
-            while (mov > 1 && ind < pathers[i].path.size()-1)
-            {
-                ind += 1;
-                vec2 vl = pathers[i].path[ind-1];
-                vec2 vh = pathers[i].path[ind];
-
-                mov -= 1.0f;
-                lastcur = cur;
-                cur = glm::max((glm::distance(vh,vl)),0.00001f);
-                mov *= lastcur/cur;
-            }
-            {
-                vec2 vl = pathers[i].path[ind-1];
-                vec2 vh = pathers[i].path[ind];
-        
-                v = vl*(1.0f-mov)+vh*mov;
-        
-            }
-            mov = pathers[i].progress/pathers[i].current;
-            ind = pathers[i].index;
-            {
-                vec2 vl = pathers[i].path[ind-1];
-                vec2 vh = pathers[i].path[ind];
-                
-                vec2 v2 = (vl*(1.0f-mov)+vh*mov);
-
-                vec2 dir = normalize(v-v2);
-                cars[i].move.x = v.x;
-                cars[i].move.z = v.y;
-                
-                cars[i].rot.y = atan2(dir.x,dir.y)*180.0f/3.141592f;
-            }
-
-        }
-
-
-        if (pathers[i].total < pathers[i].maximum)
-        {
-            pathers[i].total += elapsed/100.0f;
-            pathers[i].progress += elapsed/100.0f;
-        }
-        else
-        {
-            pathers[i].total = pathers[i].maximum;
-            pathers[i].progress = pathers[i].current;
-        }
-        while (pathers[i].current < pathers[i].progress && pathers[i].index < pathers[i].path.size() - 1)
-        {
-            pathers[i].index += 1;
-            pathers[i].progress -= pathers[i].current;
-            
-            vec2 vl = pathers[i].path[pathers[i].index-1];
-            vec2 vh = pathers[i].path[pathers[i].index];
-
-            pathers[i].current = glm::distance(vl,vh);
-        }
-            
+        vec2 v = pathers[i].start + pathers[i].dir * pathers[i].progress;
+        cars[i].move.x = v.x;
+        cars[i].move.z = v.y;
+        places.push_back(v); 
+        vels.push_back(pathers[i].dir*elapsed);
     }
+    for (int i = 0; i < pathers.size(); ++i)
+    {
+        bool move = true;
+        vec2 vel = vels[i];
+        vec2 place = places[i];
+        for (int j = 0; j < pathers.size(); ++j)
+        {
+            if (i == j)
+                continue;
+            vec2 vel2 = vels[j];
+            vec2 place2 = places[j];
+            if (glm::distance(vel + place, vel2 + place2) < 0.8f)
+            {
+                if (doIntersect(place, vel, place2, vel2))
+                {
+                    if (glm::distance(place + vel, place2) < glm::distance(place2 + vel2, place))
+                    {
+                        move = false;
+                        break;
+                    }
+                }
+            }
+        }
+        if (move)
+        {
+            pathers[i].progress += elapsed;
+            if (pathers[i].progress > pathers[i].dist)
+            {
 
+            }
+        }
+    }
     return;
 }
 
@@ -93,7 +130,6 @@ int main()
     
     vector<edger> edges;
     
-
     vector<vector<vec3>> quads;
 
     generateRoadModels(roadsegs, inputted, egs, quads, edges);
@@ -105,19 +141,14 @@ int main()
     
     
     float scaler = 0.0105;
+    for (int i = 0; i < edges.size(); ++i)
+    {
+        edges[i].v1 *= scaler;
+        edges[i].v2 *= scaler;
+    }
     generateQuads(quads, egs, inputted, count, scaler, indices, vertex_data);
     
-    vector<vector<Edge>> paths;
-
-    
-    for (int i = 0; i < 10; ++i)
-    {
-        paths.push_back(generatePath(0,i,edges));
-    }
-
-
     int code = startup(1200,600);
-
 
     if (code != 0)
         return code;
@@ -134,6 +165,16 @@ int main()
     Assimp::Importer importer;
     const aiScene* scene = importer.ReadFile("car.obj", aiProcess_FlipUVs);
     
+    
+    double lastTime = glfwGetTime();
+    int nbFrames = 0;
+    double last = glfwGetTime();
+    float speed = 0.15;
+    double totalTime = 0;
+
+    vector<vehicle> vehicles;
+    vector<Mesh> cars;
+
     indices = vector<unsigned int>();
     vertex_data = vector<VertexData>();
     
@@ -142,44 +183,21 @@ int main()
     Mesh car(vertex_data,indices, LoadShaders( "vert.glsl", "frag.glsl" ), loadDDS("delorean.dds"));
     
     car.move.y = -3.0;
-    vector<Mesh> cars;
-    for (int i = 0; i < paths.size(); ++i)
-    {
-        cars.push_back(car);
-    }
-    
-    for (int i = 0; i < edges.size(); ++i)
-    {
-        edges[i].v1 *= scaler;
-        edges[i].v2 *= scaler;
-    }
 
-    double lastTime = glfwGetTime();
-    int nbFrames = 0;
-    double last = glfwGetTime();
-    float speed = 0.15;
-    double totalTime = 0;
-    vector<vehicle> vehicles;
-    for (int i = 0; i < paths.size(); ++i)
+    for (int i = 0; i < 3; ++i)
     {
         vehicle pather;
-        vec2 start = edges[paths[i][0].first].v1;
-        //vec2 norm = normalize(edges[paths[i].first[0].first].v2-start);
-        pather.current = glm::distance(edges[paths[i][0].first].v2,start);
-        pather.progress = 0.1f+i/2.0f;
-        pather.index = 1;
-        pather.total =  pather.progress;
-        pather.maximum = 0;
-        for (int j = 0; j < paths[i].size(); ++j)
-        {
-            pather.path.push_back(edges[paths[i][j].first].v1);
-            pather.path.push_back(edges[paths[i][j].first].v2);
-        }
-        for (int j = 1; j < pather.path.size(); ++j)
-        {
-            pather.maximum += glm::distance(pather.path[j-1],pather.path[j]);
-        }
+        vector<Edge> edger = generatePath(0,i,edges);
+
+        pather.index = 0;
+        pather.destination = i;
+        pather.progress = i/2.0f;
+        pather.start = edges[0].v1;
+        pather.dir = normalize(edges[0].v2-edges[0].v1);
+        pather.dist = glm::distance(edges[0].v2,edges[0].v1);
+
         vehicles.push_back(pather);
+        cars.push_back(car);
     }
     do{	
         double elapsed = fps(nbFrames, totalTime, lastTime, last)*speed;
@@ -190,7 +208,7 @@ int main()
         for (int i = 0; i < cars.size(); ++i)
             cars[i].draw();
 
-        processCars(cars, paths, vehicles, edges, scaler, elapsed);
+        processCars(cars, vehicles, edges, scaler, elapsed/100.0f);
 
         glfwSwapBuffers();
 

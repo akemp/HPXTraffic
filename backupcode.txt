@@ -377,3 +377,86 @@ void foutRoads(const vector<vector<vec3>> &quads, const vector<pair<vec3,vector<
     fout.close();
     return;
 }
+
+/*
+        vec2 start = edges[paths[i][0].first].v1;
+        //vec2 norm = normalize(edges[paths[i].first[0].first].v2-start);
+        pather.current = glm::distance(edges[paths[i][0].first].v2,start);
+        pather.progress = 0.1f+i/2.0f;
+        pather.index = 1;
+        pather.total =  pather.progress;
+        pather.maximum = 0;
+        for (int j = 0; j < paths[i].size(); ++j)
+        {
+            pather.path.push_back(edges[paths[i][j].first].v1);
+            pather.path.push_back(edges[paths[i][j].first].v2);
+        }
+        for (int j = 1; j < pather.path.size(); ++j)
+        {
+            pather.maximum += glm::distance(pather.path[j-1],pather.path[j]);
+        }*/
+
+        /*
+        {
+            float mov = (pathers[i].progress + 0.2)/pathers[i].current;
+            int ind = pathers[i].index;
+            vec2 v;
+            float cur = pathers[i].current;
+            float lastcur = cur;
+            while (mov > 1 && ind < pathers[i].path.size()-1)
+            {
+                ind += 1;
+                vec2 vl = pathers[i].path[ind-1];
+                vec2 vh = pathers[i].path[ind];
+
+                mov -= 1.0f;
+                lastcur = cur;
+                cur = glm::max((glm::distance(vh,vl)),0.00001f);
+                mov *= lastcur/cur;
+            }
+            {
+                vec2 vl = pathers[i].path[ind-1];
+                vec2 vh = pathers[i].path[ind];
+        
+                v = vl*(1.0f-mov)+vh*mov;
+        
+            }
+            mov = pathers[i].progress/pathers[i].current;
+            ind = pathers[i].index;
+            {
+                vec2 vl = pathers[i].path[ind-1];
+                vec2 vh = pathers[i].path[ind];
+                
+                vec2 v2 = (vl*(1.0f-mov)+vh*mov);
+
+                vec2 dir = normalize(v-v2);
+                cars[i].move.x = v.x;
+                cars[i].move.z = v.y;
+                
+                cars[i].rot.y = atan2(dir.x,dir.y)*180.0f/3.141592f;
+            }
+        }
+        
+
+
+        if (pathers[i].total < pathers[i].maximum)
+        {
+            pathers[i].total += elapsed/100.0f;
+            pathers[i].progress += elapsed/100.0f;
+        }
+        else
+        {
+            pathers[i].total = pathers[i].maximum;
+            pathers[i].progress = pathers[i].current;
+        }
+        while (pathers[i].current < pathers[i].progress && pathers[i].index < pathers[i].path.size() - 1)
+        {
+            pathers[i].index += 1;
+            pathers[i].progress -= pathers[i].current;
+            
+            vec2 vl = pathers[i].path[pathers[i].index-1];
+            vec2 vh = pathers[i].path[pathers[i].index];
+
+            pathers[i].current = glm::distance(vl,vh);
+        }
+        */
