@@ -11,20 +11,6 @@ using namespace boost;
 using namespace glm;
 using namespace std;
 
-struct edger
-{
-    pair<int,int> edge;
-    vec2 v1;
-    vec2 v2;
-    vector<int> neighbors;
-
-    edger(){};
-    edger(pair<int,int> v)
-    {
-        edge = v;
-    }
-};
-
 
 template <class T>
 const std::vector<

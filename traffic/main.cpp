@@ -3,19 +3,17 @@
 struct vehicle
 {
     int destination;
-    int index;
-    int heading;
     vec2 start;
     vec2 dir;
+    int index;
 
-    vector<Edge> edgers;
+    vector<int> edgers;
     int pos;
     vec2 vel;
 
     float progress;
     float dist;
     bool waiting;
-    bool turning;
 };
  
 
@@ -25,9 +23,11 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
     vector<vec2> places;
     vector<vec2> vels;
 
+    float carsize = 0.5;
+
     for (int i = 0; i < pathers.size(); ++i)
     {
-        if (pathers[i].pos > pathers[i].edgers.size())
+        if (pathers[i].pos >= pathers[i].edgers.size())
         {
             pathers.erase(pathers.begin() + i);
             cars.erase(cars.begin() + i);
@@ -51,74 +51,65 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
     for (int i = 0; i < pathers.size(); ++i)
     {
         bool move = true;
-        /*
         vec2 vel = vels[i];
         vec2 place = places[i];
-        Line line1;
-        line1.push_back(Point(place[0],place[1]));
-        line1.push_back(Point(vel[0],vel[1]));
-        for (int j = 0; j < pathers.size(); ++j)
+        vec2 start = pathers[i].start;
+        if (!pathers[i].waiting)
         {
-            if (i == j)
-                continue;
-
-            vec2 vel2 = vels[j];
-            vec2 place2 = places[j];
-            if (glm::distance(vel + place, vel2 + place2) < 0.8f)
+            for (int j = 0; j < pathers.size(); ++j)
             {
-
-                Line line2;
-                line2.push_back(Point(place2[0],place2[1]));
-                line2.push_back(Point(vel2[0],vel2[1]));
-                
-                vector<Point> ints = GetLineLineIntersections(line1,line2);
-                if (ints.size() > 0 && !(pathers[i].waiting && !pathers[j].waiting))
+                if (i == j || pathers[j].index != pathers[i].index)
+                    continue;
+                else
                 {
-                    vec2 pt = vec2(ints.front().x(),ints.front().y());
-                    
-                    if (glm::distance(place + vel, place2) < glm::distance(place2 + vel2, place))
-                    {
-                        if (pathers[i].waiting && pathers[j].waiting)
-                        {
-                            if (pathers[i].progress < pathers[j].progress)
-                            {
-                                pathers[i].progress = 0;
-                                move = false;
-                                break;
-                            }
-                        }
-                        else
-                        {
-                            move = false;
-                            break;
-                        }
-                    }
+                    vec2 place2 = places[j];
+                    if (glm::distance(places[j], places[i]) > carsize || glm::distance(places[i], start) >= glm::distance(places[j], start))
+                        continue;
+                    move = false;
+                    break;
                 }
             }
         }
-        */
+        else
+        {
+            for (int j = 0; j < pathers.size(); ++j)
+            {
+                if (i == j || pathers[j].waiting || pathers[j].index != pathers[i].edgers[pathers[i].pos])
+                    continue;
+                else
+                {
+                    vec2 place2 = places[j];
+                    if (glm::distance(places[j], pathers[j].start) > carsize)
+                        continue;
+                    move = false;
+                    break;
+                }
+            }
+        }
         if (move)
         {
             pathers[i].progress += elapsed;
-            if (pathers[i].progress > pathers[i].dist)
+            if (pathers[i].progress >= pathers[i].dist)
             {
                 pathers[i].progress = 0;
                 if (pathers[i].waiting)
                 {
                     pathers[i].waiting = false;
-                    pathers[i].index = pathers[i].heading;
-                    pathers[i].start = edges[pathers[i].heading].v1;
-                    pathers[i].dir = normalize(edges[pathers[i].heading].v2-edges[pathers[i].heading].v1);
-                    pathers[i].dist = glm::distance(edges[pathers[i].heading].v2,edges[pathers[i].heading].v1);
-                    pathers[i].heading = pathers[i].edgers[pathers[i].pos].second;
-                    pathers[i].pos += 1;
+                    if (pathers[i].pos < pathers[i].edgers.size())
+                    {
+                        pathers[i].index = pathers[i].edgers[pathers[i].pos];
+                        pathers[i].start = edges[pathers[i].index].v1;
+                        pathers[i].dir = normalize(edges[pathers[i].index].v2-pathers[i].start);
+                        pathers[i].dist = glm::distance(pathers[i].start,edges[pathers[i].index].v2);
+                    }
                 }
                 else
                 {
                     pathers[i].waiting = true;
                     pathers[i].dist = 0.5;
                     pathers[i].start = edges[pathers[i].index].v2;
-                    pathers[i].dir = normalize(edges[pathers[i].heading].v1-edges[pathers[i].index].v2);
+                    //pathers[i].dir = normalize(edges[pathers[i].edgers[pathers[i].pos+1]].v1-pathers[i].start);
+                    pathers[i].pos += 1;
                 }
             }
         }
@@ -159,7 +150,6 @@ int main()
     if (code != 0)
         return code;
     
-    int width = 64, height = width;
     GLuint VertexArrayID;
     glGenVertexArrays(1, &VertexArrayID);
     glBindVertexArray(VertexArrayID);
@@ -190,22 +180,39 @@ int main()
     
     car.move.y = -3.0;
 
-    for (int i = 0; i < 10; ++i)
+    
+    vector<Edge> edge_vector;
+    vector<double> weight_array;
+
+    for (int i = 0; i < edges.size(); ++i)
+    {
+        for (int j = 0; j < edges[i].neighbors.size(); ++j)
+        {
+            edge_vector.push_back(Edge(i, edges[i].neighbors[j]));
+            edger temp = edges[edges[i].neighbors[j]];
+            weight_array.push_back(glm::distance(temp.v1, temp.v2));
+        }
+    }
+    
+    graph_t g(edge_vector.begin(), edge_vector.end(), weight_array.begin(), edges.size());
+    property_map<graph_t, edge_weight_t>::type weightmap = get(edge_weight, g);
+    vector<vertex_descriptor> p(num_vertices(g));
+    vector<double> d(num_vertices(g));
+
+    for (int i = 0; i < 1000; ++i)
     {
         vehicle pather;
-        vector<Edge> edger = generatePath(i%edges.size(),0,edges);
+        vector<int> edger = generatePath(i%edges.size(),0,edges,g,weightmap,p,d,i);
 
-        pather.index = edger[0].first;
-        pather.heading = edger[0].second;
-        pather.destination = 0;
-        pather.progress = (i%10)/5.0f;
-        pather.start = edges[pather.index].v1;
-        pather.dir = normalize(edges[pather.index].v2-edges[pather.index].v1);
-        pather.dist = glm::distance(edges[pather.index].v2,edges[pather.index].v1);
-        pather.waiting = false;
-        pather.turning = false;
-        pather.edgers = edger;
         pather.pos = 0;
+        pather.destination = 0;
+        pather.progress = (i%10)/10.0f;
+        pather.start = edges[edger.front()].v1;
+        pather.dir = normalize(edges[edger.front()].v2-pather.start);
+        pather.dist = glm::distance(edges[edger.front()].v2,pather.start);
+        pather.waiting = false;
+        pather.edgers = edger;
+        pather.index = edger.front();
 
         vehicles.push_back(pather);
         cars.push_back(car);
