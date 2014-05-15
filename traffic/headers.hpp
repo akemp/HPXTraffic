@@ -4,6 +4,8 @@
 //#include <hpx/hpx_init.hpp>
 
 #include <traffic/graphics.hpp>
+#include <traffic/geometry.hpp>
+#include <traffic/pathing.hpp>
 
 // Include standard headers
 #include <stdio.h>
@@ -13,96 +15,12 @@
 #include <iomanip>
 #include <queue>
 #include <fstream>
-
+/*
 #include <boost/random/normal_distribution.hpp>
 #include <boost/random/variate_generator.hpp>
 #include <boost/random/mersenne_twister.hpp>
+*/
 
-
-#include <boost/graph/graph_traits.hpp>
-#include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/dijkstra_shortest_paths.hpp>
-#include <boost/property_map/property_map.hpp>
-
-#include <boost/geometry.hpp>
-#include <boost/geometry/geometries/linestring.hpp>
-#include <boost/geometry/geometries/point_xy.hpp>
-
-
-
-using namespace boost; 
-using namespace glm;
-using namespace std;
-
-struct edger
-{
-    pair<int,int> edge;
-    vec2 v1;
-    vec2 v2;
-    vector<int> neighbors;
-
-    edger(){};
-    edger(pair<int,int> v)
-    {
-        edge = v;
-    }
-};
-
-
-template <class T>
-const std::vector<
-  boost::geometry::model::d2::point_xy<T>
->
-GetLineLineIntersections(
-  const boost::geometry::model::linestring<
-    boost::geometry::model::d2::point_xy<T>
-  > line1,
-  const boost::geometry::model::linestring<
-    boost::geometry::model::d2::point_xy<T>
-  > line2)
-{
-  typedef boost::geometry::model::d2::point_xy<T> Point;
-  typedef boost::geometry::model::linestring<Point> Line;
-  std::vector<Point> points;
-  boost::geometry::intersection(line1,line2,points);
-  assert(points.empty() || points.size() == 1);
-  return points;
-}
-
-template <class T>
-const boost::geometry::model::linestring<boost::geometry::model::d2::point_xy<T>
->
-CreateLine(const std::vector<boost::geometry::model::d2::point_xy<T> >& v)
-{
-  return boost::geometry::model::linestring<
-    boost::geometry::model::d2::point_xy<T>
-  >(v.begin(),v.end());
-}
-
-struct fuzzy_equal_to
-  : public std::binary_function<double,double,bool>
-{
-  fuzzy_equal_to(const double tolerance = std::numeric_limits<double>::epsilon())
-    : m_tolerance(tolerance)
-  {
-    assert(tolerance >= 0.0);
-  }
-  bool operator()(const double lhs, const double rhs) const
-  {
-    return rhs > (1.0 - m_tolerance) * lhs
-        && rhs < (1.0 + m_tolerance) * lhs;
-  }
-  const double m_tolerance;
-};
-
-
-typedef boost::geometry::model::d2::point_xy<double> Point;
-typedef boost::geometry::model::linestring<Point> Line;
-
-typedef adjacency_list < listS, vecS, directedS,
-no_property, property < edge_weight_t, double > > graph_t;
-typedef graph_traits < graph_t >::vertex_descriptor vertex_descriptor;
-typedef std::pair<int, int> Edge;
 
 
 
@@ -311,70 +229,6 @@ vector<Line> generateRoads(int dim, int offset, float size)
 }
 
 
-vector<Edge> shortest_path(vertex_descriptor target, vertex_descriptor s, graph_t g, const vector<double>& d, const vector<vertex_descriptor>& p)
-{
-    vector<Edge> nodes;
-    int test = 0;
-    int ltarget = target;
-    {
-        do{
-            ltarget = target;
-            target = p[target];
-            nodes.push_back(Edge(target, ltarget));
-            ++test;
-        }while(target != s && test < 10000000);
-    }
-    if (target != s)
-    {
-        cout << "ERROR! STUCK IN LOOP!\n";
-        exit(1);
-    }
-    reverse(nodes.begin(), nodes.end());
-    return nodes;
-}
-
-vector<Edge> generate_path(const graph_t &g, vertex_descriptor s, vertex_descriptor t, vector<vertex_descriptor> p, vector<double> d)
-{
-
-    //cout << "\nGenerating paths\n";
-
-    dijkstra_shortest_paths(g, s,
-                            predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
-                            distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g))));
-    
-    //cout << "\nGenerated. Outputting path\n";
-
-    return shortest_path(t,s,g,d,p);
-}
-
-vector<Edge> generatePath(int start, int end,vector<edger> edges)
-{
-    vector<Edge> edge_vector;
-    vector<double> weight_array;
-
-    for (int i = 0; i < edges.size(); ++i)
-    {
-        for (int j = 0; j < edges[i].neighbors.size(); ++j)
-        {
-            edge_vector.push_back(Edge(i, edges[i].neighbors[j]));
-            edger temp = edges[edges[i].neighbors[j]];
-            weight_array.push_back(glm::distance(temp.v1, temp.v2));
-        }
-    }
-    
-    graph_t g(edge_vector.begin(), edge_vector.end(), weight_array.begin(), edges.size());
-
-    property_map<graph_t, edge_weight_t>::type weightmap = get(edge_weight, g);
-    vector<vertex_descriptor> p(num_vertices(g));
-    vector<double> d(num_vertices(g));
-
-    time_t timev;
-
-    vertex_descriptor s = vertex(start%num_vertices(g), g);
-    vertex_descriptor t = vertex(end%num_vertices(g), g);
-
-    return generate_path(g,s,t, p, d);
-}
 
 void generateRoadModels(const vector<Line>& roadsegs, vector<vec2>& inputted, vector<pair<int,int>>& egs, vector<vector<vec3>>& quads, vector<edger>& edges)
 {

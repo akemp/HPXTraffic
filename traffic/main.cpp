@@ -4,116 +4,122 @@ struct vehicle
 {
     int destination;
     int index;
+    int heading;
     vec2 start;
     vec2 dir;
 
+    vector<Edge> edgers;
+    int pos;
     vec2 vel;
 
     float progress;
     float dist;
+    bool waiting;
+    bool turning;
 };
  
-// Given three colinear points p, q, r, the function checks if
-// point q lies on line segment 'pr'
-bool onSegment(vec2 p, vec2 q, vec2 r)
-{
-    if (q.x <= glm::max(p.x, r.x) && q.x >= glm::min(p.x, r.x) &&
-        q.y <= glm::max(p.y, r.y) && q.y >= glm::min(p.y, r.y))
-       return true;
- 
-    return false;
-}
- 
-// To find orientation of ordered triplet (p, q, r).
-// The function returns following values
-// 0 --> p, q and r are colinear
-// 1 --> Clockwise
-// 2 --> Counterclockwise
-int orientation(vec2 p, vec2 q, vec2 r)
-{
-    // See 10th slides from following link for derivation of the formula
-    // http://www.dcs.gla.ac.uk/~pat/52233/slides/Geometry1x1.pdf
-    float val = (q.y - p.y) * (r.x - q.x) -
-              (q.x - p.x) * (r.y - q.y);
- 
-    if (val == 0) return 0;  // colinear
- 
-    return (val > 0)? 1: 2; // clock or counterclock wise
-}
- 
-// The main function that returns true if line segment 'p1q1'
-// and 'p2q2' intersect.
-bool doIntersect(vec2 p1, vec2 q1, vec2 p2, vec2 q2)
-{
-    // Find the four orientations needed for general and
-    // special cases
-    int o1 = orientation(p1, q1, p2);
-    int o2 = orientation(p1, q1, q2);
-    int o3 = orientation(p2, q2, p1);
-    int o4 = orientation(p2, q2, q1);
- 
-    // General case
-    if (o1 != o2 && o3 != o4)
-        return true;
- 
-    // Special Cases
-    // p1, q1 and p2 are colinear and p2 lies on segment p1q1
-    if (o1 == 0 && onSegment(p1, p2, q1)) return true;
- 
-    // p1, q1 and p2 are colinear and q2 lies on segment p1q1
-    if (o2 == 0 && onSegment(p1, q2, q1)) return true;
- 
-    // p2, q2 and p1 are colinear and p1 lies on segment p2q2
-    if (o3 == 0 && onSegment(p2, p1, q2)) return true;
- 
-     // p2, q2 and q1 are colinear and q1 lies on segment p2q2
-    if (o4 == 0 && onSegment(p2, q1, q2)) return true;
- 
-    return false; // Doesn't fall in any of the above cases
-}
 
 void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
     const vector<edger>& edges, const float scaler, const float elapsed)
 {
     vector<vec2> places;
     vector<vec2> vels;
+
     for (int i = 0; i < pathers.size(); ++i)
     {
-        vec2 v = pathers[i].start + pathers[i].dir * pathers[i].progress;
+        if (pathers[i].pos > pathers[i].edgers.size())
+        {
+            pathers.erase(pathers.begin() + i);
+            cars.erase(cars.begin() + i);
+            --i;
+        }
+    }
+    for (int i = 0; i < pathers.size(); ++i)
+    {
+        float prog;
+        if (pathers[i].waiting)
+            prog = 0.0f;
+        else
+            prog = pathers[i].progress;
+        vec2 v = pathers[i].start + pathers[i].dir * prog;
+        
         cars[i].move.x = v.x;
         cars[i].move.z = v.y;
         places.push_back(v); 
-        vels.push_back(pathers[i].dir*elapsed);
+        vels.push_back(pathers[i].dir*prog);
     }
     for (int i = 0; i < pathers.size(); ++i)
     {
         bool move = true;
+        /*
         vec2 vel = vels[i];
         vec2 place = places[i];
+        Line line1;
+        line1.push_back(Point(place[0],place[1]));
+        line1.push_back(Point(vel[0],vel[1]));
         for (int j = 0; j < pathers.size(); ++j)
         {
             if (i == j)
                 continue;
+
             vec2 vel2 = vels[j];
             vec2 place2 = places[j];
             if (glm::distance(vel + place, vel2 + place2) < 0.8f)
             {
-                if (doIntersect(place, vel, place2, vel2))
+
+                Line line2;
+                line2.push_back(Point(place2[0],place2[1]));
+                line2.push_back(Point(vel2[0],vel2[1]));
+                
+                vector<Point> ints = GetLineLineIntersections(line1,line2);
+                if (ints.size() > 0 && !(pathers[i].waiting && !pathers[j].waiting))
                 {
+                    vec2 pt = vec2(ints.front().x(),ints.front().y());
+                    
                     if (glm::distance(place + vel, place2) < glm::distance(place2 + vel2, place))
                     {
-                        move = false;
-                        break;
+                        if (pathers[i].waiting && pathers[j].waiting)
+                        {
+                            if (pathers[i].progress < pathers[j].progress)
+                            {
+                                pathers[i].progress = 0;
+                                move = false;
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            move = false;
+                            break;
+                        }
                     }
                 }
             }
         }
+        */
         if (move)
         {
             pathers[i].progress += elapsed;
             if (pathers[i].progress > pathers[i].dist)
             {
-
+                pathers[i].progress = 0;
+                if (pathers[i].waiting)
+                {
+                    pathers[i].waiting = false;
+                    pathers[i].index = pathers[i].heading;
+                    pathers[i].start = edges[pathers[i].heading].v1;
+                    pathers[i].dir = normalize(edges[pathers[i].heading].v2-edges[pathers[i].heading].v1);
+                    pathers[i].dist = glm::distance(edges[pathers[i].heading].v2,edges[pathers[i].heading].v1);
+                    pathers[i].heading = pathers[i].edgers[pathers[i].pos].second;
+                    pathers[i].pos += 1;
+                }
+                else
+                {
+                    pathers[i].waiting = true;
+                    pathers[i].dist = 0.5;
+                    pathers[i].start = edges[pathers[i].index].v2;
+                    pathers[i].dir = normalize(edges[pathers[i].heading].v1-edges[pathers[i].index].v2);
+                }
             }
         }
     }
@@ -184,17 +190,22 @@ int main()
     
     car.move.y = -3.0;
 
-    for (int i = 0; i < 3; ++i)
+    for (int i = 0; i < 10; ++i)
     {
         vehicle pather;
-        vector<Edge> edger = generatePath(0,i,edges);
+        vector<Edge> edger = generatePath(i%edges.size(),0,edges);
 
-        pather.index = 0;
-        pather.destination = i;
-        pather.progress = i/2.0f;
-        pather.start = edges[0].v1;
-        pather.dir = normalize(edges[0].v2-edges[0].v1);
-        pather.dist = glm::distance(edges[0].v2,edges[0].v1);
+        pather.index = edger[0].first;
+        pather.heading = edger[0].second;
+        pather.destination = 0;
+        pather.progress = (i%10)/5.0f;
+        pather.start = edges[pather.index].v1;
+        pather.dir = normalize(edges[pather.index].v2-edges[pather.index].v1);
+        pather.dist = glm::distance(edges[pather.index].v2,edges[pather.index].v1);
+        pather.waiting = false;
+        pather.turning = false;
+        pather.edgers = edger;
+        pather.pos = 0;
 
         vehicles.push_back(pather);
         cars.push_back(car);

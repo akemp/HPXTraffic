@@ -64,7 +64,9 @@ add_definitions(
 set (sources 
 	traffic/main.cpp
 	traffic/headers.hpp
+	traffic/geometry.hpp
 	traffic/graphics.hpp
+	traffic/pathing.hpp
 	traffic/vert.glsl
 	traffic/frag.glsl
 	common/controls.cpp
