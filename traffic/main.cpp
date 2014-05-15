@@ -43,7 +43,7 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
     vector<vec2> places;
     vector<vec2> vels;
 
-    float carsize = 0.5;
+    float carsize = 0.6;
 
     for (int i = 0; i < pathers.size(); ++i)
     {
@@ -65,6 +65,7 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
         
         cars[i].move.x = v.x;
         cars[i].move.z = v.y;
+        cars[i].rot.y = atan2(pathers[i].dir.x,pathers[i].dir.y)*180.0f/3.141592f;
         places.push_back(v); 
         vels.push_back(pathers[i].dir*prog);
     }
@@ -194,6 +195,8 @@ int main()
     {
         edges[i].v1 *= scaler;
         edges[i].v2 *= scaler;
+        edges[i].v1 += normalize(edges[i].v2-edges[i].v1)*0.2f;
+        edges[i].v2 += normalize(edges[i].v1-edges[i].v2)*0.2f;
     }
 
     generateQuads(quads, egs, inputted, count, scaler, indices, vertex_data);
@@ -218,7 +221,7 @@ int main()
     double lastTime = glfwGetTime();
     int nbFrames = 0;
     double last = glfwGetTime();
-    float speed = 0.25;
+    float speed = 0.15;
     double totalTime = 0;
 
     vector<vehicle> vehicles;
@@ -292,7 +295,7 @@ int main()
 
     }
 
-    for (int i = 0; i < 200; ++i)
+    for (int i = 0; i < 1000; ++i)
     {
         vehicle pather;
         vector<int> edger = generatePath((i)%edges.size(),0,g,weightmap,p,d,i);
