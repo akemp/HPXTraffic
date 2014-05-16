@@ -6,6 +6,7 @@
 #include <traffic/graphics.hpp>
 #include <traffic/geometry.hpp>
 #include <traffic/pathing.hpp>
+#include <traffic/runtime.hpp>
 
 // Include standard headers
 #include <stdio.h>
