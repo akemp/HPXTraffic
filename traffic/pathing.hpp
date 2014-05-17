@@ -7,6 +7,8 @@
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
 #include <boost/graph/dijkstra_shortest_paths.hpp>
+
+#include <boost/graph/astar_search.hpp>
 #include <boost/property_map/property_map.hpp>
 
 
@@ -25,6 +27,42 @@ typedef graph_traits < graph_t >::vertex_descriptor vertex_descriptor;
 typedef std::pair<int, int> Edge;
 
 
+// euclidean distance heuristic
+template <class Graph, class CostType, class LocMap>
+class distance_heuristic : public astar_heuristic<Graph, CostType>
+{
+public:
+  typedef typename graph_traits<Graph>::vertex_descriptor Vertex;
+  distance_heuristic(LocMap l, Vertex goal)
+    : m_location(l), m_goal(goal) {}
+  CostType operator()(Vertex u)
+  {
+    return (m_location[u]->totaltime());
+  }
+private:
+  LocMap m_location;
+  Vertex m_goal;
+};
+
+struct found_goal {}; // exception for termination
+
+// visitor that terminates when we find the goal
+template <class Vertex>
+class astar_goal_visitor : public boost::default_astar_visitor
+{
+public:
+  astar_goal_visitor(Vertex goal) : m_goal(goal) {}
+  template <class Graph>
+  void examine_vertex(Vertex u, Graph& g) {
+    if(u == m_goal)
+      throw found_goal();
+  }
+private:
+  Vertex m_goal;
+};
+
+
+
 struct edger
 {
     pair<int,int> edge;
@@ -40,42 +78,58 @@ struct edger
 };
 
 
-
-vector<int> shortest_path(vertex_descriptor target, vertex_descriptor s, graph_t g, const vector<double>& d, const vector<vertex_descriptor>& p)
+struct street
 {
-    vector<int> nodes;
-    int test = 0;
-    int ltarget = target;
+    vec2 v1;
+    vec2 v2;
+    float dist;
+    float traffic;
+
+    vector<int> neighbors;
+    vector<vector<Edge>> intersects;
+
+    street(){};
+    street(edger edge)
     {
-        do{ 
-            ltarget = target;
-            target = p[target];
-            nodes.push_back(target);
-            ++test;
-        } while(target != s && test < 10000000);
-    }
-    if (target != s)
+        v1 = edge.v1;
+        v2 = edge.v2;
+        dist = glm::distance(v1,v2);
+        traffic = 0;
+        neighbors = edge.neighbors;
+    };
+    float totaltime()
     {
-        cout << "ERROR! STUCK IN LOOP!\n";
-        exit(1);
+        return traffic + dist;
     }
-    reverse(nodes.begin(), nodes.end());
-    return nodes;
-}
+
+};
 
 vector<int> generatePath(int start, int end, const graph_t &g, 
-    const property_map<graph_t, edge_weight_t>::type &weightmap, vector<vertex_descriptor> &p, vector<double>& d, int i)
+    const property_map<graph_t, edge_weight_t>::type &weightmap, const vector<vertex_descriptor> &p,
+    const vector<double>& d, const vector<street*>& streets,
+    const pred_map& pd)
 {
     vertex_descriptor s = vertex(start%num_vertices(g), g);
     vertex_descriptor t = vertex(end%num_vertices(g), g);
-
-    pred_map pd = predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
-                            distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g)));
-    dijkstra_shortest_paths(g, s,
+    vector<int> shortest_path;
+    /*dijkstra_shortest_paths(g, s,
                             pd);
-    
-    cout << i << endl;
-
-    return shortest_path(t,s,g,d,p);
+    */
+      try {
+    // call astar named parameter interface
+    astar_search
+      (g, s,
+       distance_heuristic<graph_t, float, vector<street*>>
+        (streets, t),
+       pd.visitor(astar_goal_visitor<vertex_descriptor>(t)));
+      } catch(found_goal fg) { // found a path to the goal
+        for(vertex_descriptor v = t;; v = p[v]) {
+          shortest_path.push_back(v);
+          if(p[v] == v)
+            break;
+        }
+        reverse(shortest_path.begin(), shortest_path.end());
+      }
+    return shortest_path;
 }
 

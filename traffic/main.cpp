@@ -25,8 +25,8 @@ int main()
     {
         edges[i].v1 *= scaler;
         edges[i].v2 *= scaler;
-        edges[i].v1 += normalize(edges[i].v2-edges[i].v1)*0.3f;
-        edges[i].v2 += normalize(edges[i].v1-edges[i].v2)*0.3f;
+        edges[i].v1 += normalize(edges[i].v2-edges[i].v1)*0.4f;
+        edges[i].v2 += normalize(edges[i].v1-edges[i].v2)*0.4f;
     }
 
     generateQuads(quads, egs, inputted, count, scaler, indices, vertex_data);
@@ -51,7 +51,7 @@ int main()
     double lastTime = glfwGetTime();
     int nbFrames = 0;
     double last = glfwGetTime();
-    float speed = 0.05;
+    float speed = 0.5;
     double totalTime = 0;
 
     vector<vehicle> vehicles;
@@ -84,6 +84,8 @@ int main()
     property_map<graph_t, edge_weight_t>::type weightmap = get(edge_weight, g);
     vector<vertex_descriptor> p(num_vertices(g));
     vector<double> d(num_vertices(g));
+    pred_map pd = predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
+                            distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g)));
 
     vector<street> streets;
     for (int i = 0; i < edges.size(); ++i)
@@ -112,7 +114,7 @@ int main()
                 if (edge.first == i)
                     continue;
                 vec2 o2 = edges[edge_vector[k].first].v2;
-                if (glm::distance(o,o2) > 10.0)
+                if (glm::distance(o,o2) > 3.0)
                     continue;
                 vec2 dir2 = edges[edge_vector[k].second].v1;
                 adder =  normalize(edges[edge_vector[k].second].v1-o2)*0.2f;
@@ -133,22 +135,23 @@ int main()
 
     }
 
-    for (int i = 0; i < 1200; ++i)
+    vector<street*> streetsp;
+
+    for (int i = 0; i < streets.size(); ++i)
+        streetsp.push_back(&streets[i]);
+    for (int i = 0; i < 1500; ++i)
     {
         vehicle pather;
-        vector<int> edger = generatePath(i/10.0,0,g,weightmap,p,d,i);
+        vector<int> path = generatePath(i/10,i*193012930129,g,weightmap,p,d,streetsp,pd);
 
-        pather.pos = 0;
-        pather.destination = edger.back();
+        pather.destination = path.back();
         pather.progress = (i%10)*0.4f+i*0.01f;
-        pather.start = streets[edger.front()].v1;
-        pather.dir = normalize(streets[edger.front()].v2-pather.start);
-        pather.dist = glm::distance(streets[edger.front()].v2,pather.start);
-        pather.waiting = false;
-        pather.edgers = edger;
-        pather.index = edger.front();
-        pather.turning = false;
-        pather.turn = Edge(edger.front(), edger[1]);
+        pather.start = streets[path.front()].v1;
+        pather.dir = normalize(streets[path.front()].v2-pather.start);
+        pather.dist = glm::distance(streets[path.front()].v2,pather.start);
+        pather.path = path;
+        pather.index = path.front();
+        pather.turn = Edge(path.front(), path[1]);
 
         vehicles.push_back(pather);
         cars.push_back(car);
@@ -163,7 +166,7 @@ int main()
             cars[i].draw();
         float iters = 5;
         for (float i = 0; i < iters; ++i)
-            processCars(cars, vehicles, streets, scaler, elapsed/(100.0f*iters));
+            processCars(cars, vehicles, streets, streetsp, scaler, elapsed/(100.0f*iters));
 
         glfwSwapBuffers();
 
