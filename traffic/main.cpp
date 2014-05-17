@@ -87,6 +87,7 @@ int main()
     pred_map pd = predecessor_map(boost::make_iterator_property_map(p.begin(), get(boost::vertex_index, g))).
                             distance_map(boost::make_iterator_property_map(d.begin(), get(boost::vertex_index, g)));
 
+
     vector<street> streets;
     for (int i = 0; i < edges.size(); ++i)
     {   
@@ -142,7 +143,7 @@ int main()
     for (int i = 0; i < 1500; ++i)
     {
         vehicle pather;
-        vector<int> path = generatePath(i/10,i*193012930129,g,weightmap,p,d,streetsp,pd);
+        vector<int> path = generatePath(i/10,0,g,weightmap,p,d,streetsp,pd);
 
         pather.destination = path.back();
         pather.progress = (i%10)*0.4f+i*0.01f;
@@ -166,7 +167,7 @@ int main()
             cars[i].draw();
         float iters = 5;
         for (float i = 0; i < iters; ++i)
-            processCars(cars, vehicles, streets, streetsp, scaler, elapsed/(100.0f*iters));
+            processCars(cars, vehicles, streets, scaler, elapsed/(100.0f*iters),g,weightmap,p,d,streetsp,pd);
 
         glfwSwapBuffers();
 

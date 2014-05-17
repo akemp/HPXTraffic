@@ -104,7 +104,8 @@ struct street
 
 };
 
-vector<int> generatePath(int start, int end, const graph_t &g, 
+vector<int> generatePath(int start, int end,
+    const graph_t &g, 
     const property_map<graph_t, edge_weight_t>::type &weightmap, const vector<vertex_descriptor> &p,
     const vector<double>& d, const vector<street*>& streets,
     const pred_map& pd)

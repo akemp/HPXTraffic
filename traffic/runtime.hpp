@@ -11,7 +11,6 @@ struct vehicle
     int index;
 
     vector<int> path;
-    int pos;
     vec2 vel;
 
     float progress;
@@ -22,7 +21,6 @@ struct vehicle
     bool turning;
     vehicle()
     {
-        pos = 0;
         waiting = false;
         turning = false;
         avgtime = 0;
@@ -41,7 +39,11 @@ struct vehicle
 
  
 void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
-    const vector<street>& streets, const vector<street*>& streetsp, const float scaler, const float elapsed)
+    vector<street>& streets, const float scaler, const float elapsed,
+    const graph_t &g, 
+    const property_map<graph_t, edge_weight_t>::type &weightmap, const vector<vertex_descriptor> &p,
+    const vector<double>& d, const vector<street*>& streetsp,
+    const pred_map& pd)
 {
     vector<vec2> places;
     vector<vec2> vels;
@@ -167,7 +169,9 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                 else if (pathers[i].waiting)
                 {
                     pathers[i].waiting = false;
+                    streets[pathers[i].index].traffic -= 20.0;
                     pathers[i].index = pathers[i].path.front();
+                    streets[pathers[i].index].traffic += 20.0;
                     pathers[i].dir = normalize(streets[pathers[i].index].v1-pathers[i].start);
                     pathers[i].dist = glm::distance(streets[pathers[i].index].v1,pathers[i].start)+0.001;
                     pathers[i].turning = true;
@@ -182,6 +186,30 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                     pathers[i].path.erase(pathers[i].path.begin());
                     if (0 < pathers[i].path.size())
                     {
+                        {
+                            vertex_descriptor s = vertex(pathers[i].path.front(), g);
+                            vertex_descriptor t = vertex(pathers[i].destination, g);
+                            vector<int> shortest_path;
+                            /*dijkstra_shortest_paths(g, s,
+                                                    pd);
+                            */
+                              try {
+                            // call astar named parameter interface
+                            astar_search
+                              (g, s,
+                               distance_heuristic<graph_t, float, vector<street*>>
+                                (streetsp, t),
+                               pd.visitor(astar_goal_visitor<vertex_descriptor>(t)));
+                              } catch(found_goal fg) { // found a path to the goal
+                                for(vertex_descriptor v = t;; v = p[v]) {
+                                  shortest_path.push_back(v);
+                                  if(p[v] == v)
+                                    break;
+                                }
+                                reverse(shortest_path.begin(), shortest_path.end());
+                              }
+                               pathers[i].path = shortest_path;
+                        }
                         pathers[i].turn = Edge(pathers[i].index,pathers[i].path.front());
                     }
                 }
