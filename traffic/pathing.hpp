@@ -129,6 +129,7 @@ struct street
     vec2 dir;
     float dist;
     float traffic;
+    float caradj;
 
     vector<int> neighbors;
     vector<vector<Edge>> intersects;
@@ -144,6 +145,7 @@ struct street
         traffic = 0;
         neighbors = edge.neighbors;
         dir = normalize(v2-v1);
+        caradj = 1.0f;
     };
     float totaltime()
     {
@@ -154,10 +156,19 @@ struct street
         vector<pair<vehicle*,int>>::iterator it = remove_if(cars.begin(), cars.end(),
                                                   [car](const pair<vehicle*,int> pather) {return(pather.second == car);});
         cars.erase(it, cars.end());
+        traffic -= caradj;
+        if (traffic < 0)
+            traffic = 0;
     }
     void addvehicle(vehicle* car)
     {
         cars.push_back(pair<vehicle*,int>(car,car->license));
+        traffic += caradj;
+    }
+    void erasecars()
+    {
+        cars = vector<pair<vehicle*, int>>();
+        traffic = 0;
     }
 };
 
