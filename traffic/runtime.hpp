@@ -8,13 +8,26 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
     const vector<double>& d, const vector<street*>& streetsp,
     const pred_map& pd)
 {
-    vector<vec2> places;
-    vector<vec2> vels;
 
     float carsize = 0.45;
-
-    remove_if(pathers.begin(), pathers.end(), [](const vehicle& pather) {return(pather.index == pather.destination);});
+    int lastsize = pathers.size();
+    {
+        vector<vehicle>::iterator it = remove_if(pathers.begin(), pathers.end(),
+            [](const vehicle& pather) {return(pather.index == pather.destination);});
+        pathers.erase(it, pathers.end());
+    }
     cars.resize(pathers.size());
+    if (pathers.size() != lastsize)
+    {
+        for (int i = 0; i < streets.size(); ++i)
+        {
+            streets[i].cars = vector<pair<vehicle*,int>>();
+        }
+        for (int i = 0; i < pathers.size(); ++i)
+        {
+            pathers[i].streetloc->addvehicle(&pathers[i]);
+        }
+    }
 
     for (int i = 0; i < pathers.size(); ++i)
     {
@@ -27,31 +40,27 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
         
         cars[i].move.x = v.x;
         cars[i].move.z = v.y;
+        pathers[i].place = v;
 
         cars[i].rot.y = atan2(pathers[i].dir.x,pathers[i].dir.y)*180.0f/3.141592f;
         
-        places.push_back(v); 
-        vels.push_back(pathers[i].dir*prog);
     }
     for (int i = 0; i < pathers.size(); ++i)
     {
         bool move = true;
         if (!pathers[i].turning)
         {
-            vec2 vel = vels[i];
-            vec2 place = places[i];
             vec2 start = pathers[i].start;
             if (!pathers[i].waiting)
             {
-                int j = -1;
-                for (vector<vehicle>::iterator it = pathers.begin(); it < pathers.end(); ++it)
+                for (vector<pair<vehicle*,int>>::iterator it = pathers[i].streetloc->cars.begin(); it < pathers[i].streetloc->cars.end(); ++it)
                 {
-                    ++j;
-                    if (i == j || it->index != pathers[i].index)
+                    if ((*it).second == pathers[i].license)
                         continue;
                     else
                     {
-                        if (glm::distance(places[j], places[i]) > carsize || glm::distance(places[i], start) >= glm::distance(places[j], start))
+                        if (glm::distance((*it).first->place, pathers[i].place) > carsize ||
+                            glm::distance(pathers[i].place, start) >= glm::distance((*it).first->place, start))
                             continue;
                         move = false;
                         break;
@@ -60,11 +69,20 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
             }
             else
             {
-                int j = -1;
+                int index = -1;
+                for (int k = 0; k < streets[pathers[i].turn.first].neighbors.size(); ++k)
+                {
+                    if(pathers[i].turn.second == streets[pathers[i].turn.first].neighbors[k])
+                    {
+                        index = k;
+                        break;
+                    }
+                }
+                if (index < 0)
+                    exit(1);
                 for (vector<vehicle>::iterator it = pathers.begin(); it < pathers.end(); ++it)
                 {
-                    ++j;
-                    if (i == j || pathers[j].waiting || (!it->turning && it->index != pathers[i].path.front()))
+                    if (it->license == pathers[i].license || it->waiting || (!it->turning && it->index != pathers[i].path.front()))
                         continue;
                     else if (it->turning)
                     {
@@ -73,17 +91,6 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                             move = false;
                             break;
                         }
-                        int index = -1;
-                        for (int k = 0; k < streets[pathers[i].turn.first].neighbors.size(); ++k)
-                        {
-                            if(pathers[i].turn.second == streets[pathers[i].turn.first].neighbors[k])
-                            {
-                                index = k;
-                                break;
-                            }
-                        }
-                        if (index < 0)
-                            exit(1);
                         for (int k = 0; k < streets[pathers[i].turn.first].intersects[index].size(); ++k)
                         {
                             if (streets[pathers[i].turn.first].intersects[index][k].first == it->turn.first
@@ -96,7 +103,7 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                     }
                     else
                     {
-                        if (glm::distance(places[j], it->start) > carsize)
+                        if (glm::distance(it->place, it->start) > carsize)
                             continue;
                         move = false;
                         break;
@@ -124,11 +131,19 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                 else if (pathers[i].waiting)
                 {
                     pathers[i].waiting = false;
+
                     streets[pathers[i].index].traffic -= 20.0;
+
                     pathers[i].index = pathers[i].path.front();
+                    pathers[i].streetloc->removevehicle(pathers[i].license);
+                    pathers[i].streetloc = &streets[pathers[i].index];
+                    pathers[i].streetloc->addvehicle(&pathers[i]);
+
                     streets[pathers[i].index].traffic += 20.0;
+
                     pathers[i].dir = normalize(streets[pathers[i].index].v1-pathers[i].start);
                     pathers[i].dist = glm::distance(streets[pathers[i].index].v1,pathers[i].start)+0.001;
+
                     pathers[i].turning = true;
                 }
                 else

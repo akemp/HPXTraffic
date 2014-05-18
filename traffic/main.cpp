@@ -145,16 +145,17 @@ int main()
     cars.resize(ncars, car);
     for (int i = 0; i < ncars; ++i)
     {
-        vehicle pather(i);
         //vector<int> path = generatePath(i/10,0,g,weightmap,p,d,streetsp,pd);
         int start = i/10;
         int end = 0;
+        int index = start;
+        vehicle pather(i, streetsp[index]);
         pather.destination = end;
-        pather.index = start;
+        pather.index = index;
         pather.progress = (i%10)*0.4f+i*0.01f;
-        pather.start = streets[pather.index].v1;
-        pather.dir = streets[pather.index].dir;
-        pather.dist = streets[pather.index].dist;
+        pather.start = streets[index].v1;
+        pather.dir = streets[index].dir;
+        pather.dist = streets[index].dist;
         //pather.path = path;
         //pather.turn = Edge(path.front(), path[1]);
         vehicles.push_back(pather);
@@ -166,17 +167,17 @@ int main()
         computeMatricesFromInputs();
 
         terrain.draw();
-        for (int i = 0; i < cars.size(); ++i)
-            cars[i].draw();
         float iters = 5;
         for (float i = 0; i < iters; ++i)
             processCars(cars, vehicles, streets, scaler, elapsed/(100.0f*iters),g,weightmap,p,d,streetsp,pd);
+        for (int i = 0; i < cars.size(); ++i)
+            cars[i].draw();
 
         glfwSwapBuffers();
 
     } while( glfwGetKey( GLFW_KEY_ESC ) != GLFW_PRESS &&
                 glfwGetWindowParam( GLFW_OPENED ) );
-
+     vehicles.resize(0);
      glfwTerminate();
 
     return 0;

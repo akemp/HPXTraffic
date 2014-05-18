@@ -6,7 +6,6 @@
 
 #include <boost/graph/graph_traits.hpp>
 #include <boost/graph/adjacency_list.hpp>
-#include <boost/graph/dijkstra_shortest_paths.hpp>
 
 #include <boost/graph/astar_search.hpp>
 #include <boost/property_map/property_map.hpp>
@@ -77,6 +76,8 @@ struct edger
     }
 };
 
+typedef struct street;
+
 struct vehicle
 {
     int destination;
@@ -84,7 +85,7 @@ struct vehicle
     vec2 start;
     vec2 dir;
 
-    vector<pair<vec2,float>> hist;
+    street* streetloc;
 
     int index;
     int license;
@@ -99,12 +100,14 @@ struct vehicle
     float avgtime;
     bool waiting;
     bool turning;
-    vehicle(int ind)
+    vehicle(int ind, street* loc)
     {
         waiting = false;
         turning = false;
         avgtime = 0;
         license = ind;
+        streetloc = loc;
+
     };
     vehicle(){};
     float gettime()
@@ -130,7 +133,7 @@ struct street
     vector<int> neighbors;
     vector<vector<Edge>> intersects;
 
-    vector<vehicle*> cars;
+    vector<pair<vehicle*,int>> cars;
 
     street(){};
     street(edger edge)
@@ -148,13 +151,14 @@ struct street
     }
     void removevehicle(const int car)
     {
-        remove_if(cars.begin(), cars.end(),  [car](const vehicle* pather) {return(pather->license == car);});
+        vector<pair<vehicle*,int>>::iterator it = remove_if(cars.begin(), cars.end(),
+                                                  [car](const pair<vehicle*,int> pather) {return(pather.second == car);});
+        cars.erase(it, cars.end());
     }
     void addvehicle(vehicle* car)
     {
-        cars.push_back(car);
+        cars.push_back(pair<vehicle*,int>(car,car->license));
     }
-
 };
 
 vector<int> generatePath(int start, int end,
