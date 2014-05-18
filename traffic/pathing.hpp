@@ -77,16 +77,60 @@ struct edger
     }
 };
 
+struct vehicle
+{
+    int destination;
+    Edge turn;
+    vec2 start;
+    vec2 dir;
+
+    vector<pair<vec2,float>> hist;
+
+    int index;
+    int license;
+
+    vector<int> path;
+    vec2 vel;
+    vec2 place;
+
+    float progress;
+    float dist;
+    float last;
+    float avgtime;
+    bool waiting;
+    bool turning;
+    vehicle(int ind)
+    {
+        waiting = false;
+        turning = false;
+        avgtime = 0;
+        license = ind;
+    };
+    vehicle(){};
+    float gettime()
+    {
+        float avgret = avgtime;
+        avgtime = 0;
+        return avgret;
+    }
+    void increment(float elapsed)
+    {
+        avgtime += elapsed;
+    }
+};
 
 struct street
 {
     vec2 v1;
     vec2 v2;
+    vec2 dir;
     float dist;
     float traffic;
 
     vector<int> neighbors;
     vector<vector<Edge>> intersects;
+
+    vector<vehicle*> cars;
 
     street(){};
     street(edger edge)
@@ -96,10 +140,19 @@ struct street
         dist = glm::distance(v1,v2);
         traffic = 0;
         neighbors = edge.neighbors;
+        dir = normalize(v2-v1);
     };
     float totaltime()
     {
         return traffic + dist;
+    }
+    void removevehicle(const int car)
+    {
+        remove_if(cars.begin(), cars.end(),  [car](const vehicle* pather) {return(pather->license == car);});
+    }
+    void addvehicle(vehicle* car)
+    {
+        cars.push_back(car);
     }
 
 };

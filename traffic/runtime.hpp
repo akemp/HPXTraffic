@@ -1,41 +1,4 @@
 
-struct vehicle
-{
-    int destination;
-    Edge turn;
-    vec2 start;
-    vec2 dir;
-
-    vector<pair<vec2,float>> hist;
-
-    int index;
-
-    vector<int> path;
-    vec2 vel;
-
-    float progress;
-    float dist;
-    float last;
-    float avgtime;
-    bool waiting;
-    bool turning;
-    vehicle()
-    {
-        waiting = false;
-        turning = false;
-        avgtime = 0;
-    };
-    float gettime()
-    {
-        float avgret = avgtime;
-        avgtime = 0;
-        return avgret;
-    }
-    void increment(float elapsed)
-    {
-        avgtime += elapsed;
-    }
-};
 
  
 void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
@@ -50,15 +13,9 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
 
     float carsize = 0.45;
 
-    for (int i = 0; i < pathers.size(); ++i)
-    {
-        if (0 >= pathers[i].path.size())
-        {
-            pathers.erase(pathers.begin() + i);
-            cars.erase(cars.begin() + i);
-            --i;
-        }
-    }
+    remove_if(pathers.begin(), pathers.end(), [](const vehicle& pather) {return(pather.index == pather.destination);});
+    cars.resize(pathers.size());
+
     for (int i = 0; i < pathers.size(); ++i)
     {
         float prog;
@@ -94,7 +51,6 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                         continue;
                     else
                     {
-                        vec2 place2 = places[j];
                         if (glm::distance(places[j], places[i]) > carsize || glm::distance(places[i], start) >= glm::distance(places[j], start))
                             continue;
                         move = false;
@@ -108,7 +64,7 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                 for (vector<vehicle>::iterator it = pathers.begin(); it < pathers.end(); ++it)
                 {
                     ++j;
-                    if (i == j || pathers[j].waiting || (it->index != pathers[i].path.front() && !it->turning))
+                    if (i == j || pathers[j].waiting || (!it->turning && it->index != pathers[i].path.front()))
                         continue;
                     else if (it->turning)
                     {
@@ -148,7 +104,6 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                 }
             }
         }
-        pathers[i].increment(elapsed);
         if (move)
         {
             pathers[i].progress += elapsed;
@@ -162,8 +117,8 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                     //if (pathers[i].pos < pathers[i].edgers.size())
                     {
                         pathers[i].start = streets[pathers[i].index].v1;
-                        pathers[i].dir = normalize(streets[pathers[i].index].v2-pathers[i].start);
-                        pathers[i].dist = glm::distance(pathers[i].start,streets[pathers[i].index].v2);
+                        pathers[i].dir = streets[pathers[i].index].dir;
+                        pathers[i].dist = streets[pathers[i].index].dist;
                     }
                 }
                 else if (pathers[i].waiting)
@@ -183,34 +138,12 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                     pathers[i].start = streets[pathers[i].index].v2;
                     //pathers[i].dir = normalize(edges[pathers[i].edgers[pathers[i].pos+1]].v1-pathers[i].start);
                     //pathers[i].pos += 1;
-                    pathers[i].path.erase(pathers[i].path.begin());
-                    if (0 < pathers[i].path.size())
-                    {
-                        {
-                            vertex_descriptor s = vertex(pathers[i].path.front(), g);
-                            vertex_descriptor t = vertex(pathers[i].destination, g);
-                            vector<int> shortest_path;
-                            /*dijkstra_shortest_paths(g, s,
-                                                    pd);
-                            */
-                              try {
-                            // call astar named parameter interface
-                            astar_search
-                              (g, s,
-                               distance_heuristic<graph_t, float, vector<street*>>
-                                (streetsp, t),
-                               pd.visitor(astar_goal_visitor<vertex_descriptor>(t)));
-                              } catch(found_goal fg) { // found a path to the goal
-                                for(vertex_descriptor v = t;; v = p[v]) {
-                                  shortest_path.push_back(v);
-                                  if(p[v] == v)
-                                    break;
-                                }
-                                reverse(shortest_path.begin(), shortest_path.end());
-                              }
-                               pathers[i].path = shortest_path;
-                        }
-                        pathers[i].turn = Edge(pathers[i].index,pathers[i].path.front());
+                    //
+                    {   
+                        pathers[i].path = generatePath(pathers[i].index,pathers[i].destination,g,weightmap,p,d,streetsp,pd);
+                        pathers[i].path.erase(pathers[i].path.begin());
+                        if (0 < pathers[i].path.size())
+                            pathers[i].turn = Edge(pathers[i].index,pathers[i].path.front());
                     }
                 }
             }

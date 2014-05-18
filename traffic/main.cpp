@@ -140,22 +140,25 @@ int main()
 
     for (int i = 0; i < streets.size(); ++i)
         streetsp.push_back(&streets[i]);
-    for (int i = 0; i < 1500; ++i)
+    int ncars = 2000;
+    vehicles.reserve(ncars);
+    cars.resize(ncars, car);
+    for (int i = 0; i < ncars; ++i)
     {
-        vehicle pather;
-        vector<int> path = generatePath(i/10,0,g,weightmap,p,d,streetsp,pd);
-
-        pather.destination = path.back();
+        vehicle pather(i);
+        //vector<int> path = generatePath(i/10,0,g,weightmap,p,d,streetsp,pd);
+        int start = i/10;
+        int end = 0;
+        pather.destination = end;
+        pather.index = start;
         pather.progress = (i%10)*0.4f+i*0.01f;
-        pather.start = streets[path.front()].v1;
-        pather.dir = normalize(streets[path.front()].v2-pather.start);
-        pather.dist = glm::distance(streets[path.front()].v2,pather.start);
-        pather.path = path;
-        pather.index = path.front();
-        pather.turn = Edge(path.front(), path[1]);
-
+        pather.start = streets[pather.index].v1;
+        pather.dir = streets[pather.index].dir;
+        pather.dist = streets[pather.index].dist;
+        //pather.path = path;
+        //pather.turn = Edge(path.front(), path[1]);
         vehicles.push_back(pather);
-        cars.push_back(car);
+        streets[pather.index].addvehicle(&vehicles[vehicles.size()-1]);
     }
     do{	
         double elapsed = fps(nbFrames, totalTime, lastTime, last)*speed;
