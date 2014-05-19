@@ -14,7 +14,7 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
     {
         for (int i = 0; i < pathers.size(); ++i)
         {
-            int count = i*342;
+            int count = i*341;
             while (pathers[i].index == pathers[i].destination)
             {
                 pathers[i].destination = (pathers[i].destination + count)%streets.size();
@@ -89,7 +89,12 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                     it < streets[pathers[i].turn.second].cars.end(); ++it)
                 {
                     if ((*it).first->waiting)
-                        continue;
+                    {
+                        if ((*it).first->progress <= pathers[i].progress)
+                            continue;
+                        move = false;
+                        break;
+                    }
                     else if ((*it).first->turning)
                     {
                         move = false;
@@ -155,7 +160,7 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                 if (pathers[i].vel < 0)
                     pathers[i].vel = 0;
                 if (pathers[i].turning)
-                    pathers[i].vel = glm::min(pathers[i].vel, 0.05f);
+                    pathers[i].vel = glm::max(pathers[i].vel, 0.05f);
                 pathers[i].progress += pathers[i].vel * elapsed;
             }
         }
@@ -214,7 +219,7 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                 {
                     pathers[i].waiting = true;
                     pathers[i].waited = 0;
-                    pathers[i].dist = 0.1;
+                    pathers[i].dist = 0.2;
                     pathers[i].vel = 0;
                     pathers[i].start = streets[pathers[i].index].v2;
                     //pathers[i].dir = normalize(edges[pathers[i].edgers[pathers[i].pos+1]].v1-pathers[i].start);
