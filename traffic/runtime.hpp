@@ -174,6 +174,7 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                     pathers[i].vel += elapsed*glm::min(1.0f-pathers[i].vel,0.5f)/4.0f;
                     pathers[i].vel = glm::min(1.0f,pathers[i].vel);
                     pathers[i].vel -= elapsed * (2.0f*pow(glm::max(pathers[i].vel*4.0f-diff,0.0f),2.0f));
+                    pathers[i].vel = glm::max(0.05f,pathers[i].vel);
                 }
                 pathers[i].progress += pathers[i].vel * elapsed;
             }
