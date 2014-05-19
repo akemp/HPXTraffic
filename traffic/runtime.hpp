@@ -154,6 +154,8 @@ void processCars(vector<Mesh>& cars, vector<vehicle>& pathers,
                 pathers[i].vel -= elapsed * (1.0f+dister);
                 if (pathers[i].vel < 0)
                     pathers[i].vel = 0;
+                if (pathers[i].turning)
+                    pathers[i].vel = glm::min(pathers[i].vel, 0.05f);
                 pathers[i].progress += pathers[i].vel * elapsed;
             }
         }
