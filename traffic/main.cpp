@@ -3,7 +3,7 @@
 int main()
 {
     float len = 200;
-	vector<Line> roadsegs = generateRoads(6,4, len);
+	vector<Line> roadsegs = generateRoads(8,4, len);
     
     vector<pair<int,int>> egs;
     vector<vec2> inputted;
@@ -140,26 +140,41 @@ int main()
 
     for (int i = 0; i < streets.size(); ++i)
         streetsp.push_back(&streets[i]);
-    int ncars = 2000;
+    int ncars = 4000;
     vehicles.reserve(ncars);
     cars.resize(ncars, car);
+    float carsize = 0.45f;
+    int counter = 0;
     for (int i = 0; i < ncars; ++i)
     {
         //vector<int> path = generatePath(i/10,0,g,weightmap,p,d,streetsp,pd);
-        int start = i/10;
-        int end = 0;
+        int start = counter%streets.size();
+        int end = 0;//(i*321093)%streets.size();
         int index = start;
-        vehicle pather(i, streetsp[index]);
-        pather.destination = end;
-        pather.index = index;
-        pather.progress = (i%10)*0.4f+i*0.01f;
-        pather.start = streets[index].v1;
-        pather.dir = streets[index].dir;
-        pather.dist = streets[index].dist;
-        //pather.path = path;
-        //pather.turn = Edge(path.front(), path[1]);
-        vehicles.push_back(pather);
-        streets[pather.index].addvehicle(&vehicles[vehicles.size()-1]);
+        int inc = 0;
+        while (streets[index].cars.size() * carsize+carsize > streets[index].dist)
+        {
+            start = counter%streets.size();
+            end = 0;//(i*321093+counter*12055)%streets.size();
+            index = start;
+            ++counter;
+            ++inc;
+            if (inc > 100)
+                exit(1);
+        }
+        {
+            vehicle pather(i, streetsp[index]);
+            pather.destination = end;
+            pather.index = index;
+            pather.progress = streets[index].cars.size() * carsize+i*0.0001f;
+            pather.start = streets[index].v1;
+            pather.dir = streets[index].dir;
+            pather.dist = streets[index].dist;
+            //pather.path = path;
+            //pather.turn = Edge(path.front(), path[1]);
+            vehicles.push_back(pather);
+            streets[pather.index].addvehicle(&vehicles[vehicles.size()-1]);
+        }
     }
     do{	
         double elapsed = fps(nbFrames, totalTime, lastTime, last)*speed;
@@ -169,7 +184,7 @@ int main()
         terrain.draw();
         float iters = 5;
         for (float i = 0; i < iters; ++i)
-            processCars(cars, vehicles, streets, scaler, elapsed/(100.0f*iters),g,weightmap,p,d,streetsp,pd);
+            processCars(cars, vehicles, streets, scaler, elapsed/(100.0f*iters),g,weightmap,p,d,streetsp,pd, carsize,true);
         for (int i = 0; i < cars.size(); ++i)
             cars[i].draw();
 
@@ -177,8 +192,8 @@ int main()
 
     } while( glfwGetKey( GLFW_KEY_ESC ) != GLFW_PRESS &&
                 glfwGetWindowParam( GLFW_OPENED ) );
-     vehicles.resize(0);
      glfwTerminate();
+     vehicles.resize(0);
 
     return 0;
 }
