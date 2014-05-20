@@ -65,9 +65,13 @@ set (sources
 	traffic/main.cpp
 	traffic/headers.hpp
 	traffic/geometry.hpp
+    	traffic/geometry.cpp
 	traffic/graphics.hpp
+    	traffic/graphics.cpp
 	traffic/pathing.hpp
+	traffic/pathing.cpp
 	traffic/runtime.hpp
+    	traffic/runtime.cpp
 	traffic/vert.glsl
 	traffic/frag.glsl
 	common/controls.cpp

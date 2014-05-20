@@ -2,6 +2,9 @@
 
 int main()
 {
+    using namespace std;
+    using namespace boost;
+    using namespace glm;
     float len = 200;
 	vector<Line> roadsegs = generateRoads(8,4, len);
     
@@ -18,7 +21,6 @@ int main()
     
     vector<unsigned int> indices;
     vector<VertexData> vertex_data;
-    
     
     float scaler = 0.0105;
     for (int i = 0; i < edges.size(); ++i)
@@ -51,7 +53,7 @@ int main()
     double lastTime = glfwGetTime();
     int nbFrames = 0;
     double last = glfwGetTime();
-    float speed = 0.5;
+    float speed = 1.0;
     double totalTime = 0;
 
     vector<vehicle> vehicles;
@@ -91,7 +93,7 @@ int main()
     vector<street> streets;
     for (int i = 0; i < edges.size(); ++i)
     {   
-        street temp(edges[i]);
+        street temp(edges[i],i);
         vec2 o = temp.v2;
         vector<vector<Edge>> intersects;
         for (int j = 0; j < temp.neighbors.size(); ++j)
@@ -140,7 +142,7 @@ int main()
 
     for (int i = 0; i < streets.size(); ++i)
         streetsp.push_back(&streets[i]);
-    int ncars = 3000;
+    int ncars = 1000;
     vehicles.reserve(ncars);
     cars.resize(ncars, car);
     float carsize = 0.45f;
@@ -165,7 +167,6 @@ int main()
         {
             vehicle pather(i, streetsp[index]);
             pather.destination = end;
-            pather.index = index;
             pather.progress = streets[index].cars.size() * carsize+i*0.0001f;
             pather.start = streets[index].v1;
             pather.dir = streets[index].dir;
@@ -173,7 +174,7 @@ int main()
             //pather.path = path;
             //pather.turn = Edge(path.front(), path[1]);
             vehicles.push_back(pather);
-            streets[pather.index].addvehicle(&vehicles[vehicles.size()-1]);
+            streets[index].addvehicle(&vehicles[vehicles.size()-1]);
         }
     }
     do{	
@@ -182,9 +183,11 @@ int main()
         computeMatricesFromInputs();
 
         terrain.draw();
-        float iters = 5;
+        //elapsed = 1.0f;//glm::min(10.0,elapsed);
+        //elapsed = 100.0f;
+        float iters = 100.0f;
         for (float i = 0; i < iters; ++i)
-            processCars(cars, vehicles, streets, scaler, elapsed/(100.0f*iters),g,weightmap,p,d,streetsp,pd, carsize,true);
+            processCars(cars, vehicles, streets, scaler, 0.001f,g,weightmap,p,d,streetsp,pd, carsize,true);
         for (int i = 0; i < cars.size(); ++i)
             cars[i].draw();
 
