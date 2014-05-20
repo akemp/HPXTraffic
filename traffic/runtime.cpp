@@ -66,7 +66,7 @@ void processCars(std::vector<Mesh>& cars, std::vector<vehicle>& pathers,
     {
         bool move = true;
         float total = 0;
-        for (float j = pathers[i].vel; j > 0; j -= elapsed/0.1f)
+        for (float j = pathers[i].vel; j > 0; j -= elapsed*0.1f)
             total += j;
         //if (!pathers[i].turning)
         {
@@ -80,8 +80,7 @@ void processCars(std::vector<Mesh>& cars, std::vector<vehicle>& pathers,
                     else
                     {
                         if (glm::distance((*it).first->place, pathers[i].place) > carsize+total*0.1f ||
-                            glm::distance(pathers[i].place, start) >= glm::distance((*it).first->place, start) || 
-                            pathers[i].turning && (*it).first->waiting)
+                            glm::distance(pathers[i].place, start) >= glm::distance((*it).first->place, start))
                             continue;
                         pathers[i].vel -= elapsed * (0.1f);
                         if (pathers[i].vel < 0.00f)

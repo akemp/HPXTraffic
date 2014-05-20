@@ -185,9 +185,9 @@ int main()
         terrain.draw();
         //elapsed = 1.0f;//glm::min(10.0,elapsed);
         //elapsed = 100.0f;
-        float iters = 100.0f;
+        float iters = 10.0f;
         for (float i = 0; i < iters; ++i)
-            processCars(cars, vehicles, streets, scaler, 0.001f,g,weightmap,p,d,streetsp,pd, carsize,true);
+            processCars(cars, vehicles, streets, scaler, 0.01f,g,weightmap,p,d,streetsp,pd, carsize,true);
         for (int i = 0; i < cars.size(); ++i)
             cars[i].draw();
 
