@@ -120,6 +120,7 @@ struct vehicle
         streetloc = loc;
         waited = 0;
         vel = 0;
+        path = -1;
     };
     vehicle(){};
     float gettime()

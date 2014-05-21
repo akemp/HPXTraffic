@@ -142,7 +142,7 @@ int main()
 
     for (int i = 0; i < streets.size(); ++i)
         streetsp.push_back(&streets[i]);
-    int ncars = 1000;
+    int ncars = 2000;
     vehicles.reserve(ncars);
     cars.resize(ncars, car);
     float carsize = 0.45f;

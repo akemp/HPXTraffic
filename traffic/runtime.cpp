@@ -71,6 +71,8 @@ void processCars(std::vector<Mesh>& cars, std::vector<vehicle>& pathers,
         //if (!pathers[i].turning)
         {
             vec2 start = pathers[i].start;
+            float dist1 = glm::distance(pathers[i].place, start);
+            float bufferzone = carsize+total*0.1f;
             if (!pathers[i].waiting)
             {
                 for (auto it = pathers[i].streetloc->cars.begin(); it < pathers[i].streetloc->cars.end(); ++it)
@@ -79,9 +81,28 @@ void processCars(std::vector<Mesh>& cars, std::vector<vehicle>& pathers,
                         continue;
                     else
                     {
-                        if (glm::distance((*it).first->place, pathers[i].place) > carsize+total*0.1f ||
-                            glm::distance(pathers[i].place, start) >= glm::distance((*it).first->place, start))
+                        if (glm::distance(it->first->place, pathers[i].place) > bufferzone-it->first->vel ||
+                            dist1 >= glm::distance(it->first->place, start))
                             continue;
+                        pathers[i].vel -= elapsed * (0.1f);
+                        if (pathers[i].vel < 0.00f)
+                            pathers[i].vel = 0.00f;
+                        move = false;
+                        break;
+                    }
+                }
+                if (!pathers[i].turning && !pathers[i].waiting && bufferzone+pathers[i].progress > pathers[i].dist)
+                {
+                    if (pathers[i].path < 0)
+                        pathers[i].path = generatePath(pathers[i].streetloc->index,pathers[i].destination,g,weightmap,p,d,streetsp,pd);
+                    float diff = (bufferzone+pathers[i].progress)-pathers[i].dist;
+                    for (auto it = streets[pathers[i].path].cars.begin();
+                        it < streets[pathers[i].path].cars.end(); ++it)
+                    {
+                        if (!it->first->turning || it->first->progress > diff || it->first->turn.first != pathers[i].streetloc->index)
+                        {
+                            continue;
+                        }
                         pathers[i].vel -= elapsed * (0.1f);
                         if (pathers[i].vel < 0.00f)
                             pathers[i].vel = 0.00f;
@@ -118,7 +139,7 @@ void processCars(std::vector<Mesh>& cars, std::vector<vehicle>& pathers,
                 int index = -1;
                 for (int k = 0; k < pathers[i].streetloc->neighbors.size(); ++k)
                 {
-                    if(pathers[i].turn.second == pathers[i].streetloc->neighbors[k])
+                    if (pathers[i].turn.second == pathers[i].streetloc->neighbors[k])
                     {
                         index = k;
                         break;
@@ -197,6 +218,7 @@ void processCars(std::vector<Mesh>& cars, std::vector<vehicle>& pathers,
                     pathers[i].dir = pathers[i].streetloc->dir;
                     pathers[i].dist = pathers[i].streetloc->dist;
                 }
+                pathers[i].path = generatePath(pathers[i].streetloc->index,pathers[i].destination,g,weightmap,p,d,streetsp,pd);
             }
             else if (pathers[i].waiting)
             {
