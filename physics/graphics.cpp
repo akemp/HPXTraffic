@@ -1,4 +1,4 @@
-#include <traffic/graphics.hpp>
+#include <physics/graphics.hpp>
 
 int startup(int W, int H, bool use2d)
 {
@@ -36,7 +36,7 @@ int startup(int W, int H, bool use2d)
 	}
 
 
-	glfwSetWindowTitle( "Traffic sim" );
+	glfwSetWindowTitle( "physics sim" );
 
 	// Ensure we can capture the escape key being pressed below
 	glfwEnable( GLFW_STICKY_KEYS );

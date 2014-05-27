@@ -3,10 +3,8 @@
 
 //#include <hpx/hpx_init.hpp>
 
-#include <traffic/graphics.hpp>
-#include <traffic/geometry.hpp>
-#include <traffic/pathing.hpp>
-#include <traffic/runtime.hpp>
+#include <physics/graphics.hpp>
+#include <physics/geometry.hpp>
 
 
 // Include standard headers

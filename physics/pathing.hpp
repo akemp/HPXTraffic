@@ -19,8 +19,8 @@
 
 // Include GLM
 #include <glm/glm.hpp>
-#include <traffic/geometry.hpp>
-#include <traffic/graphics.hpp>
+#include <physics/geometry.hpp>
+#include <physics/graphics.hpp>
 
 typedef boost::bgl_named_params<boost::iterator_property_map<std::_Vector_iterator<std::_Vector_val<double,std::allocator<double> > >,boost::vec_adj_list_vertex_id_map<boost::no_property,unsigned __int64>,double,double &>,enum boost::vertex_distance_t,boost::bgl_named_params<boost::iterator_property_map<std::_Vector_iterator<std::_Vector_val<unsigned __int64,std::allocator<unsigned __int64> > >,boost::vec_adj_list_vertex_id_map<boost::no_property,unsigned __int64>,unsigned __int64,unsigned __int64 &>,enum boost::vertex_predecessor_t,boost::no_property> >
     pred_map;

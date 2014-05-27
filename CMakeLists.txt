@@ -2,7 +2,7 @@
 cmake_minimum_required(VERSION 2.8.4 FATAL_ERROR)
 # CMake entry point
 cmake_minimum_required (VERSION 2.6)
-project (HPXTraffic)
+project (PhysicsEngine)
 
 find_package(OpenGL REQUIRED)
 find_package(BOOST REQUIRED)
@@ -62,18 +62,14 @@ add_definitions(
 
 
 set (sources 
-	traffic/main.cpp
-	traffic/headers.hpp
-	traffic/geometry.hpp
-    	traffic/geometry.cpp
-	traffic/graphics.hpp
-    	traffic/graphics.cpp
-	traffic/pathing.hpp
-	traffic/pathing.cpp
-	traffic/runtime.hpp
-    	traffic/runtime.cpp
-	traffic/vert.glsl
-	traffic/frag.glsl
+	physics/main.cpp
+	physics/headers.hpp
+	physics/geometry.hpp
+    physics/geometry.cpp
+	physics/graphics.hpp
+    physics/graphics.cpp
+	physics/vert.glsl
+	physics/frag.glsl
 	common/controls.cpp
 	common/controls.hpp
 	common/nanoflann.hpp
@@ -86,17 +82,17 @@ set (sources
 
 
 
-add_executable(traffic
+add_executable(physics
 		${sources})
 
-target_link_libraries(traffic
+target_link_libraries(physics
 	${ALL_LIBS}
 )
 
-create_target_launcher(traffic WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/traffic/")
+create_target_launcher(physics WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/physics/")
 SOURCE_GROUP(common REGULAR_EXPRESSION ".*/common/.*" )
 
 # add example executable
-#add_hpx_executable(traffic SOURCES ${sources} ${TRAFFIC_FLAGS} FOLDER COMPONENT_DEPENDENCIES ${ALL_LIBS} assimp)
-#create_target_launcher(traffic_exe WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/traffic/")
+#add_hpx_executable(physics SOURCES ${sources} ${physics_FLAGS} FOLDER COMPONENT_DEPENDENCIES ${ALL_LIBS} assimp)
+#create_target_launcher(physics_exe WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/physics/")
 
