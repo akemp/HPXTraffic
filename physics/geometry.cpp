@@ -282,11 +282,32 @@ void generateRoadModels(const LineMesh& roadsegs,  vector<unsigned int>& indices
             }
             
             sort(pts.begin(), pts.end(), [](const vec2& v3, const vec2& v2){return (atan2(v3.y,v3.x) > atan2(v2.y,v2.x));});
-            for (int j = 0; j < pts.size(); ++j)
-            {
-                nodes[i].corners.push_back(pts[j]);
-            }
             
+            for (int k = 0; k < nodes[i].intersects.size(); ++k)
+            {
+                bool toggled = false;
+                vec2 dir = nodes[i].intersects[k].first;
+                float phi = atan2(dir.y,dir.x);
+                for (int l = 0; l < pts.size()-1; ++l)
+                {
+                    pair<vec2,vec2> pt;
+                    pt.first = pts[l];
+                    pt.second = pts[l+1];
+                    float phi1 = atan2(pt.first.y, pt.first.x);
+                    float phi2 = atan2(pt.second.y, pt.second.x);
+                    if (phi1 >= phi && phi2 <= phi)
+                    {
+                        nodes[i].corners.push_back(pt);
+                        toggled = true;
+                        break;
+                    }
+                }
+                if (!toggled)
+                {
+                    nodes[i].corners.push_back(pair<vec2,vec2>(pts.back(),pts.front()));
+                }
+            
+            }
         }
     }
     VertexData temp;
@@ -308,8 +329,8 @@ void generateRoadModels(const LineMesh& roadsegs,  vector<unsigned int>& indices
                 {
                     vector<vec2> p2s;
                     vec2 v1 = nodes[i].center;
-                    p2s.push_back((nodes[i].corners[j]+v1)*scaler);
-                    p2s.push_back((nodes[i].corners[(j+1)%nodes[i].corners.size()]+v1)*scaler);
+                    p2s.push_back((nodes[i].corners[j].first+v1)*scaler);
+                    p2s.push_back((nodes[i].corners[j].second+v1)*scaler);
                     p2s.push_back(v1*scaler);
                     for (int k = 0; k < p2s.size(); ++k)
                     {
@@ -329,62 +350,35 @@ void generateRoadModels(const LineMesh& roadsegs,  vector<unsigned int>& indices
             for (int j = 0; j < nodes[i].intersects.size(); ++j)
             {
                 vector<vec3> quad;
-                int ele = (j+1)%nodes[i].intersects.size();
+                int ele = j;
                 vec2 v = nodes[i].intersects[ele].first/2.0f;
-                vec2 p1 = nodes[i].corners[0];
+                vec2 p1 = nodes[i].corners[j].first;
                 vec2 v1 = nodes[i].center;
                 int index = 0;
-                for (int k = 1; k < nodes[i].corners.size(); ++k)
-                {
-                    if (glm::distance(normalize(p1), normalize(v)) > glm::distance(normalize(nodes[i].corners[k]), normalize(v)))
-                    {
-                        p1 = nodes[i].corners[k];
-                        index = k;
-                    }
-                }
                 
-                vec2 p2 = vec2(0,0);
+                vec2 p2 = nodes[i].corners[j].second;
                 bool triggered = false;
-                for (int k = 0; k < nodes[i].corners.size(); ++k)
-                {
-                    if (k == index)
-                        continue;
-                    if (glm::distance(normalize(p2), normalize(v)) > glm::distance(normalize(nodes[i].corners[k]), normalize(v)) || !triggered)
-                    {
-                        p2 = nodes[i].corners[k];
-                        triggered = true;
-                    }
-                }
 
                 
 
 
                 int indexer = nodes[i].intersects[ele].second;
 
-                vec2 p3 = nodes[indexer].corners[0];
-                index = 0;
-                for (int k = 1; k < nodes[indexer].corners.size(); ++k)
+                vec2 p3, p4;
+                bool togged = false;
+                for (int k = 0; k < nodes[indexer].intersects.size(); ++k)
                 {
-                    if (glm::distance(normalize(p3), normalize(-v)) > glm::distance(normalize(nodes[indexer].corners[k]), normalize(-v)))
+                    if (nodes[indexer].intersects[k].second == nodes[i].index)
                     {
-                        p3 = nodes[indexer].corners[k];
-                        index = k;
+                        p3 = nodes[indexer].corners[k].first;
+                        p4 = nodes[indexer].corners[k].second;
+                        togged = true;
+                        break;
                     }
                 }
-                
-                
-                vec2 p4 = vec2(0,0);
-                triggered = false;
-                for (int k = 0; k < nodes[indexer].corners.size(); ++k)
-                {
-                    if (k == index)
-                        continue;
-                    if (glm::distance(normalize(p4), normalize(-v)) > glm::distance(normalize(nodes[indexer].corners[k]), normalize(-v)) || !triggered)
-                    {
-                        p4 = nodes[indexer].corners[k];
-                        triggered = true;
-                    }
-                }
+                if(!togged)
+                    exit(1);
+
 
 
                 vec2 dir = nodes[indexer].center;
