@@ -33,6 +33,10 @@ struct Mesh
         move = vec3(0,0,0);
         rot = vec3(0,0,0);
 
+        if (vert.size() <= 0 || ind.size() <= 0)
+        {
+            exit(1);
+        }
 
         programID = pID;
 	    // Get a handle for our "myTextureSampler" uniform

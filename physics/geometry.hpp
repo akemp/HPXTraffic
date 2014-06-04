@@ -7,6 +7,10 @@
 #include <boost/geometry.hpp>
 #include <boost/geometry/geometries/linestring.hpp>
 #include <boost/geometry/geometries/point_xy.hpp>
+#include <boost/geometry/geometries/polygon.hpp>
+#include <boost/geometry/multi/geometries/multi_polygon.hpp>
+#include <boost/geometry/multi/geometries/multi_linestring.hpp>
+
 // Include GLEW
 #include <GL/glew.h>
 
@@ -23,8 +27,11 @@
 typedef std::pair<int,int> Edge;
 typedef boost::geometry::model::d2::point_xy<double> Point;
 typedef boost::geometry::model::linestring<Point> Line;
+typedef boost::geometry::model::multi_linestring <Line> multilinestring;
 
 typedef std::pair<std::vector<glm::vec2>, std::vector<Edge>> LineMesh;
+typedef boost::geometry::model::polygon<Point> polygon;
+typedef boost::geometry::model::multi_polygon <polygon> multipolygon;
 
 
 template <class T>
@@ -74,34 +81,17 @@ struct fuzzy_equal_to
 
 glm::vec2 intersect(glm::vec2 v1, glm::vec2 v2);
 
-struct edger
-{
-    Edge edge;
-    glm::vec2 v1;
-    glm::vec2 v2;
-    std::vector<int> neighbors;
-
-    edger(){};
-    edger(Edge v)
-    {
-        edge = v;
-    }
-};
-
 struct Node
 {
+    std::vector<std::pair<std::pair<Node*,Node*>,bool>*> intersects;
+    Point center;
+    bool start;
     int index;
-    std::vector<std::pair<glm::vec2,int>> intersects;
-    std::vector<std::pair<glm::vec2,glm::vec2>> corners;
-    glm::vec2 center;
+    Node(){start=false;};
 };
 
 LineMesh generateRoads(int dim, int offset, float size);
 
-//This section of code and parts of its implementation are copied from http://www.richelbilderbeek.nl
-
-
 void generateRoadModels(const LineMesh& roadsegs, std::vector<unsigned int>& indices, std::vector<VertexData>& vertex_data);
-
 
 #endif

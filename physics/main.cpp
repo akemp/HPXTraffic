@@ -11,7 +11,6 @@ int main()
     vector<Edge> egs;
     vector<vec2> inputted;
     
-    vector<edger> edges;
     
     vector<vector<vec3>> quads;
 
