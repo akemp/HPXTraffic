@@ -54,7 +54,25 @@ void splitLine(vector<Line> spotsl, vector<Line>& roadsegs)
     }
      return;
 }
-
+vec2 intersection(vec2 p1, vec2 p2, vec2 p3, vec2 p4) {
+    // Store the values for fast access and easy
+    // equations-to-code conversion
+    float x1 = p1.x, x2 = p2.x, x3 = p3.x, x4 = p4.x;
+    float y1 = p1.y, y2 = p2.y, y3 = p3.y, y4 = p4.y;
+ 
+    float d = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
+    // If d is zero, there is no intersection
+    if (d == 0)
+    {d = 1; cout << "Error in intersection code.";}
+ 
+    // Get the x and y
+    float pre = (x1*y2 - y1*x2), post = (x3*y4 - y3*x4);
+    float x = ( pre * (x3 - x4) - (x1 - x2) * post ) / d;
+    float y = ( pre * (y3 - y4) - (y1 - y2) * post ) / d;
+    // Return the point of intersection
+    vec2 ret = vec2(x,y);
+    return ret;
+}
 pair<int,Node*> getInd(Node* n1, Node* n2)
 {
     int ind;
@@ -237,8 +255,8 @@ void generateRoadModels(const LineMesh& linemesh,  vector<unsigned int>& indices
 
     for (int i = 0; i < roadsegs.first.size(); ++i)
     {
-        roadsegs.first[i].x += rand()%190;
-        roadsegs.first[i].y += rand()%190;
+        roadsegs.first[i].x += rand()%120;
+        roadsegs.first[i].y += rand()%120;
     }
 
     vector<Edge> edges;
@@ -291,8 +309,6 @@ void generateRoadModels(const LineMesh& linemesh,  vector<unsigned int>& indices
         nodes[i2].intersects.push_back(&intersects.back());
     }
 
-    multipolygon polys;
-    multilinestring lines;
     
     vector<vector<int>> rings;
     
@@ -316,46 +332,80 @@ void generateRoadModels(const LineMesh& linemesh,  vector<unsigned int>& indices
     temp.texInd[0] = 1;
     for (int i = 0; i < rings.size(); ++i)
     {
-
-        polygon p;
-        for (int j = 0; j < rings[i].size(); ++j)
-        {
-            boost::geometry::append(p,nodes[rings[i][j]].center);
-        }
-        
-        boost::geometry::append(p,nodes[rings[i][0]].center);
-        boost::geometry::correct(p);
-        //for (int l = 0; l < p.inners().size(); ++l)
         {
             temp.texInd[0] += 0.55;
             if (temp.texInd[0] > 10.01)
                 temp.texInd[0] -= 9.005;
-            //vector<Point> inners = p.inners()[l];
-            vector<Point> inners = p.outer();
-            Point vn;
-            //boost::geometry::centroid(p.inners()[l],vn);
-            boost::geometry::centroid(p.outer(),vn);
-            for (int k = 0; k < inners.size(); ++k)
+            vector<Point> inners;
+            vector<int> stores;
+            for (int j = 0; j < rings[i].size(); ++j)
             {
-                vector<vec2> p2s;
-                vec2 vs = vec2(vn.x(),vn.y());
-                p2s.push_back(vec2(inners[k].x(),inners[k].y())*scaler);
-                p2s.push_back(vec2(inners[(k+1)%inners.size()].x(),inners[(k+1)%inners.size()].y())*scaler);
-                p2s.push_back(vs*scaler);
-                for (int k = 0; k < p2s.size(); ++k)
+                if(find(stores.begin(),stores.end(), rings[i][j]) == stores.end())
                 {
-                    vec2 pt = p2s[k];
-                    temp.position[0] = pt[0];
-                    temp.position[1] = 0;
-                    temp.position[2] = pt[1];
-                    temp.textureCoord[0] = pt[0];
-                    temp.textureCoord[1] = pt[1];
-                    vertex_data.push_back(temp);
+                    stores.push_back(rings[i][j]);
+                    inners.push_back(nodes[rings[i][j]].center);
                 }
-                indices.push_back(count+0);
-                indices.push_back(count+1);
-                indices.push_back(count+2);
-                count += 3;
+            }
+            for (int j = 0; j < inners.size(); ++j)
+            {
+                int ind1 = j;
+                int ind2 = (j+1)%inners.size();
+                int ind3 = (j+2)%inners.size();
+                int ind4 = (j+3)%inners.size();
+                vec2 e1(inners[ind1].x(),inners[ind1].y());
+                vec2 e2(inners[ind2].x(),inners[ind2].y());
+                vec2 e3(inners[ind3].x(),inners[ind3].y());
+                vec2 e4(inners[ind4].x(),inners[ind4].y());
+                
+                vec2 l0 = normalize(e3-e2);
+                vec2 l1 = normalize(e2-e1);
+                vec2 l2 = normalize(e4-e3);
+                
+                vec2 v1 = e2;
+                vec2 v2 = e3;
+
+                float phi = atan2(l0.y,l0.x) + 3.141592f/2.0f;
+                float phi1 = atan2(l1.y,l1.x) + 3.141592f/2.0f;
+                float phi2 = atan2(l2.y,l2.x) + 3.141592f/2.0f;
+
+                vec2 adder = normalize(vec2(cos(phi),sin(phi)));
+                
+                vec2 v3 = v2 + adder*15.0f;
+                vec2 v4 = v1 + adder*15.0f;
+                vec2 adder1 = normalize(vec2(cos(phi1),sin(phi1)));
+                vec2 adder2 = normalize(vec2(cos(phi2),sin(phi2)));
+                e1 += adder1*15.0f;
+                e4 += adder2*15.0f;
+                v3 = intersection(v3,v3+l0*10000.0f,e4,e4+l2*10000.0f);
+                v4 = intersection(v4,v4+l0*10000.0f,e1,e1+l1*10000.0f);
+
+                {
+
+
+                    vector<vec2> p2s;
+
+                    p2s.push_back(v1 * scaler);
+                    p2s.push_back(v2 * scaler);
+                    p2s.push_back(v3 * scaler);
+                    p2s.push_back(v4 * scaler);
+                    for (int k = 0; k < p2s.size(); ++k)
+                    {
+                        vec2 pt = p2s[k];
+                        temp.position[0] = pt[0];
+                        temp.position[1] = 0;
+                        temp.position[2] = pt[1];
+                        temp.textureCoord[0] = pt[0];
+                        temp.textureCoord[1] = pt[1];
+                        vertex_data.push_back(temp);
+                    }
+                    indices.push_back(count+0);
+                    indices.push_back(count+1);
+                    indices.push_back(count+2);
+                    indices.push_back(count+0);
+                    indices.push_back(count+3);
+                    indices.push_back(count+2);
+                    count += 4;
+                }
             }
         }
     }
