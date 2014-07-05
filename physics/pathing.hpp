@@ -68,14 +68,14 @@ private:
 int generatePath(int start, int end,
     const graph_t &g, 
     const boost::property_map<graph_t, boost::edge_weight_t>::type &weightmap, const std::vector<vertex_descriptor> &p,
-    const std::vector<double>& d, const std::vector<street*>& streets,
+    const std::vector<double>& d, const std::vector<road*>& streets,
     const pred_map& pd);
 
 void processCars(std::vector<Mesh>& cars, std::vector<vehicle>& pathers,
-    std::vector<street>& streets, const float scaler, const float elapsed,
+    std::vector<road>& streets, const float scaler, const float elapsed,
     const graph_t &g, 
     const boost::property_map<graph_t, boost::edge_weight_t>::type &weightmap, const std::vector<vertex_descriptor> &p,
-    const std::vector<double>& d, const std::vector<street*>& streetsp,
+    const std::vector<double>& d, const std::vector<road*>& streetsp,
     const pred_map& pd, 
     float carsize,
     bool deleteafter);

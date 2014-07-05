@@ -65,9 +65,13 @@ set (sources
 	physics/main.cpp
 	physics/headers.hpp
 	physics/geometry.hpp
-    physics/geometry.cpp
+    	physics/geometry.cpp
 	physics/graphics.hpp
-    physics/graphics.cpp
+    	physics/graphics.cpp
+	physics/pathing.hpp
+	physics/pathing.cpp
+	physics/runtime.hpp
+     	physics/runtime.cpp
 	physics/vert.glsl
 	physics/frag.glsl
 	common/controls.cpp

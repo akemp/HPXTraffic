@@ -7,7 +7,7 @@ using namespace std;
 int generatePath(int start, int end,
     const graph_t &g, 
     const property_map<graph_t, edge_weight_t>::type &weightmap, const vector<vertex_descriptor> &p,
-    const vector<double>& d, const vector<street*>& streets,
+    const vector<double>& d, const vector<road*>& streets,
     const pred_map& pd)
 {
     vertex_descriptor s = vertex(start%num_vertices(g), g);
@@ -20,7 +20,7 @@ int generatePath(int start, int end,
     // call astar named parameter interface
     astar_search
       (g, s,
-       distance_heuristic<graph_t, float, vector<street*>>
+       distance_heuristic<graph_t, float, vector<road*>>
         (streets, t),
        pd.visitor(astar_goal_visitor<vertex_descriptor>(t)));
       } catch(found_goal fg) { // found a path to the goal

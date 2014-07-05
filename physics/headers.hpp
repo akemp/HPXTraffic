@@ -5,6 +5,8 @@
 
 #include <physics/graphics.hpp>
 #include <physics/geometry.hpp>
+#include <physics/pathing.hpp>
+#include <physics/runtime.hpp>
 
 
 // Include standard headers

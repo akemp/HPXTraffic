@@ -17,6 +17,6 @@ void main()
         discard;
     vec4 col = vec4(0);
         col = texture2D(tex, tex_coords_frag);
-        col.rgb /= (texInd_frag);
+        //col.rgb /= (texInd_frag);
 	    color = vec4(col.rgb*(1.0-dist)+vec3(0.95)*dist,1.0);
 }
